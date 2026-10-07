@@ -1,0 +1,50 @@
+@'
+# .NET Build Results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.rsuser
+
+# Database Files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+App_Data/
+
+# Logs
+*.log
+logs/
+
+# Secrets & Production Config
+appsettings.Production.json
+appsettings.Local.json
+secrets.json
+.env
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Rider / Other IDEs
+.idea/
+*.sln.iml
+
+# Test Results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+'@ | Set-Content -Path ".gitignore" -Encoding UTF8
