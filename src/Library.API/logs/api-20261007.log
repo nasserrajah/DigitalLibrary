@@ -1,0 +1,162 @@
+2026-10-07 21:55:18.238 +03:00 [INF] User profile is available. Using 'C:\Users\Nasser\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-10-07 21:55:23.399 +03:00 [INF] Executed DbCommand (112ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-10-07 21:55:23.494 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-10-07 21:55:23.590 +03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";
+2026-10-07 21:55:23.613 +03:00 [INF] No migrations were applied. The database is already up to date.
+2026-10-07 21:55:24.684 +03:00 [INF] Executed DbCommand (61ms) [Parameters=[@__normalizedName_0='?' (Size = 5)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."ConcurrencyStamp", "a"."Name", "a"."NormalizedName"
+FROM "AspNetRoles" AS "a"
+WHERE "a"."NormalizedName" = @__normalizedName_0
+LIMIT 1
+2026-10-07 21:55:24.757 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__normalizedName_0='?' (Size = 4)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."ConcurrencyStamp", "a"."Name", "a"."NormalizedName"
+FROM "AspNetRoles" AS "a"
+WHERE "a"."NormalizedName" = @__normalizedName_0
+LIMIT 1
+2026-10-07 21:55:24.785 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "Categories" AS "c")
+2026-10-07 21:55:24.825 +03:00 [INF] Executed DbCommand (2ms) [Parameters=[@__normalizedEmail_0='?' (Size = 19)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."AccessFailedCount", "a"."ConcurrencyStamp", "a"."CreatedAt", "a"."Email", "a"."EmailConfirmed", "a"."ExternalProviderId", "a"."FullName", "a"."IsActive", "a"."LockoutEnabled", "a"."LockoutEnd", "a"."NormalizedEmail", "a"."NormalizedUserName", "a"."PasswordHash", "a"."PhoneNumber", "a"."PhoneNumberConfirmed", "a"."ProfileImage", "a"."Provider", "a"."SecurityStamp", "a"."StorageLimit", "a"."StorageUsed", "a"."TwoFactorEnabled", "a"."UpdatedAt", "a"."UserName"
+FROM "AspNetUsers" AS "a"
+WHERE "a"."NormalizedEmail" = @__normalizedEmail_0
+LIMIT 2
+2026-10-07 21:55:25.119 +03:00 [INF] Starting Digital Library API
+2026-10-07 21:55:25.381 +03:00 [INF] Now listening on: http://localhost:5199
+2026-10-07 21:55:25.389 +03:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-10-07 21:55:25.391 +03:00 [INF] Hosting environment: Development
+2026-10-07 21:55:25.393 +03:00 [INF] Content root path: C:\Users\Nasser\Projects\DigitalLibrary\src\Library.API
+2026-10-07 21:57:02.149 +03:00 [INF] User profile is available. Using 'C:\Users\Nasser\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-10-07 21:57:04.764 +03:00 [INF] Executed DbCommand (32ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-10-07 21:57:04.791 +03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-10-07 21:57:04.831 +03:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";
+2026-10-07 21:57:04.893 +03:00 [INF] No migrations were applied. The database is already up to date.
+2026-10-07 21:57:05.593 +03:00 [INF] Executed DbCommand (13ms) [Parameters=[@__normalizedName_0='?' (Size = 5)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."ConcurrencyStamp", "a"."Name", "a"."NormalizedName"
+FROM "AspNetRoles" AS "a"
+WHERE "a"."NormalizedName" = @__normalizedName_0
+LIMIT 1
+2026-10-07 21:57:05.889 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__normalizedName_0='?' (Size = 4)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."ConcurrencyStamp", "a"."Name", "a"."NormalizedName"
+FROM "AspNetRoles" AS "a"
+WHERE "a"."NormalizedName" = @__normalizedName_0
+LIMIT 1
+2026-10-07 21:57:05.919 +03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "Categories" AS "c")
+2026-10-07 21:57:05.941 +03:00 [INF] Executed DbCommand (1ms) [Parameters=[@__normalizedEmail_0='?' (Size = 19)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."AccessFailedCount", "a"."ConcurrencyStamp", "a"."CreatedAt", "a"."Email", "a"."EmailConfirmed", "a"."ExternalProviderId", "a"."FullName", "a"."IsActive", "a"."LockoutEnabled", "a"."LockoutEnd", "a"."NormalizedEmail", "a"."NormalizedUserName", "a"."PasswordHash", "a"."PhoneNumber", "a"."PhoneNumberConfirmed", "a"."ProfileImage", "a"."Provider", "a"."SecurityStamp", "a"."StorageLimit", "a"."StorageUsed", "a"."TwoFactorEnabled", "a"."UpdatedAt", "a"."UserName"
+FROM "AspNetUsers" AS "a"
+WHERE "a"."NormalizedEmail" = @__normalizedEmail_0
+LIMIT 2
+2026-10-07 21:57:06.195 +03:00 [INF] Starting Digital Library API
+2026-10-07 21:57:06.450 +03:00 [INF] Now listening on: http://localhost:5199
+2026-10-07 21:57:06.466 +03:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-10-07 21:57:06.480 +03:00 [INF] Hosting environment: Development
+2026-10-07 21:57:06.481 +03:00 [INF] Content root path: C:\Users\Nasser\Projects\DigitalLibrary\src\Library.API
+2026-10-07 21:58:29.400 +03:00 [INF] Application is shutting down...
+2026-10-07 21:58:40.937 +03:00 [INF] User profile is available. Using 'C:\Users\Nasser\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-10-07 21:58:42.360 +03:00 [INF] Executed DbCommand (13ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-10-07 21:58:42.375 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-10-07 21:58:42.405 +03:00 [INF] Executed DbCommand (5ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";
+2026-10-07 21:58:42.527 +03:00 [INF] No migrations were applied. The database is already up to date.
+2026-10-07 21:58:42.803 +03:00 [INF] Executed DbCommand (4ms) [Parameters=[@__normalizedName_0='?' (Size = 5)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."ConcurrencyStamp", "a"."Name", "a"."NormalizedName"
+FROM "AspNetRoles" AS "a"
+WHERE "a"."NormalizedName" = @__normalizedName_0
+LIMIT 1
+2026-10-07 21:58:42.872 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__normalizedName_0='?' (Size = 4)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."ConcurrencyStamp", "a"."Name", "a"."NormalizedName"
+FROM "AspNetRoles" AS "a"
+WHERE "a"."NormalizedName" = @__normalizedName_0
+LIMIT 1
+2026-10-07 21:58:42.889 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "Categories" AS "c")
+2026-10-07 21:58:42.902 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__normalizedEmail_0='?' (Size = 19)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."AccessFailedCount", "a"."ConcurrencyStamp", "a"."CreatedAt", "a"."Email", "a"."EmailConfirmed", "a"."ExternalProviderId", "a"."FullName", "a"."IsActive", "a"."LockoutEnabled", "a"."LockoutEnd", "a"."NormalizedEmail", "a"."NormalizedUserName", "a"."PasswordHash", "a"."PhoneNumber", "a"."PhoneNumberConfirmed", "a"."ProfileImage", "a"."Provider", "a"."SecurityStamp", "a"."StorageLimit", "a"."StorageUsed", "a"."TwoFactorEnabled", "a"."UpdatedAt", "a"."UserName"
+FROM "AspNetUsers" AS "a"
+WHERE "a"."NormalizedEmail" = @__normalizedEmail_0
+LIMIT 2
+2026-10-07 21:58:43.016 +03:00 [INF] Starting Digital Library API
+2026-10-07 21:58:43.120 +03:00 [INF] Now listening on: http://0.0.0.0:5199
+2026-10-07 21:58:43.123 +03:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-10-07 21:58:43.125 +03:00 [INF] Hosting environment: Development
+2026-10-07 21:58:43.126 +03:00 [INF] Content root path: C:\Users\Nasser\Projects\DigitalLibrary\src\Library.API
+2026-10-07 22:06:15.516 +03:00 [INF] Request starting HTTP/1.1 GET http://192.168.8.161:5199/swagger - null null
+2026-10-07 22:06:15.819 +03:00 [INF] Request finished HTTP/1.1 GET http://192.168.8.161:5199/swagger - 301 0 null 309.3123ms
+2026-10-07 22:06:15.832 +03:00 [INF] Request starting HTTP/1.1 GET http://192.168.8.161:5199/swagger/index.html - null null
+2026-10-07 22:06:16.409 +03:00 [INF] Request finished HTTP/1.1 GET http://192.168.8.161:5199/swagger/index.html - 200 null text/html;charset=utf-8 576.841ms
+2026-10-07 22:06:16.429 +03:00 [INF] Request starting HTTP/1.1 GET http://192.168.8.161:5199/swagger/index.css - null null
+2026-10-07 22:06:16.431 +03:00 [INF] Request starting HTTP/1.1 GET http://192.168.8.161:5199/swagger/swagger-ui.css - null null
+2026-10-07 22:06:16.434 +03:00 [INF] Request starting HTTP/1.1 GET http://192.168.8.161:5199/swagger/swagger-ui-bundle.js - null null
+2026-10-07 22:06:16.434 +03:00 [INF] Request starting HTTP/1.1 GET http://192.168.8.161:5199/swagger/swagger-ui-standalone-preset.js - null null
+2026-10-07 22:06:16.434 +03:00 [INF] Request starting HTTP/1.1 GET http://192.168.8.161:5199/swagger/index.js - null null
+2026-10-07 22:06:16.457 +03:00 [INF] Request finished HTTP/1.1 GET http://192.168.8.161:5199/swagger/index.js - 200 null application/javascript;charset=utf-8 22.6501ms
+2026-10-07 22:06:16.504 +03:00 [INF] Sending file. Request path: '/index.css'. Physical path: 'N/A'
+2026-10-07 22:06:16.508 +03:00 [INF] Request finished HTTP/1.1 GET http://192.168.8.161:5199/swagger/index.css - 200 202 text/css 78.2129ms
+2026-10-07 22:06:16.555 +03:00 [INF] Sending file. Request path: '/swagger-ui.css'. Physical path: 'N/A'
+2026-10-07 22:06:16.612 +03:00 [INF] Sending file. Request path: '/swagger-ui-standalone-preset.js'. Physical path: 'N/A'
+2026-10-07 22:06:16.634 +03:00 [INF] Sending file. Request path: '/swagger-ui-bundle.js'. Physical path: 'N/A'
+2026-10-07 22:06:16.711 +03:00 [INF] Request finished HTTP/1.1 GET http://192.168.8.161:5199/swagger/swagger-ui.css - 200 152034 text/css 280.1364ms
+2026-10-07 22:06:16.711 +03:00 [INF] Request finished HTTP/1.1 GET http://192.168.8.161:5199/swagger/swagger-ui-bundle.js - 200 1452753 text/javascript 276.4905ms
+2026-10-07 22:06:16.711 +03:00 [INF] Request finished HTTP/1.1 GET http://192.168.8.161:5199/swagger/swagger-ui-standalone-preset.js - 200 230293 text/javascript 276.5078ms
+2026-10-07 22:06:16.962 +03:00 [INF] Request starting HTTP/1.1 GET http://192.168.8.161:5199/swagger/v1/swagger.json - null null
+2026-10-07 22:06:17.022 +03:00 [INF] Request starting HTTP/1.1 GET http://192.168.8.161:5199/swagger/favicon-32x32.png - null null
+2026-10-07 22:06:17.029 +03:00 [INF] Sending file. Request path: '/favicon-32x32.png'. Physical path: 'N/A'
+2026-10-07 22:06:17.033 +03:00 [INF] Request finished HTTP/1.1 GET http://192.168.8.161:5199/swagger/favicon-32x32.png - 200 628 image/png 11.2088ms
+2026-10-07 22:06:17.492 +03:00 [INF] Request finished HTTP/1.1 GET http://192.168.8.161:5199/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 530.066ms
+2026-10-07 22:32:32.825 +03:00 [INF] Application is shutting down...
+2026-10-07 22:32:56.982 +03:00 [INF] User profile is available. Using 'C:\Users\Nasser\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-10-07 22:32:57.975 +03:00 [INF] Executed DbCommand (9ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-10-07 22:32:57.989 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-10-07 22:32:58.004 +03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";
+2026-10-07 22:32:58.023 +03:00 [INF] No migrations were applied. The database is already up to date.
+2026-10-07 22:32:58.224 +03:00 [INF] Executed DbCommand (2ms) [Parameters=[@__normalizedName_0='?' (Size = 5)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."ConcurrencyStamp", "a"."Name", "a"."NormalizedName"
+FROM "AspNetRoles" AS "a"
+WHERE "a"."NormalizedName" = @__normalizedName_0
+LIMIT 1
+2026-10-07 22:32:58.268 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__normalizedName_0='?' (Size = 4)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."ConcurrencyStamp", "a"."Name", "a"."NormalizedName"
+FROM "AspNetRoles" AS "a"
+WHERE "a"."NormalizedName" = @__normalizedName_0
+LIMIT 1
+2026-10-07 22:32:58.281 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "Categories" AS "c")
+2026-10-07 22:32:58.294 +03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__normalizedEmail_0='?' (Size = 19)], CommandType='"Text"', CommandTimeout='30']
+SELECT "a"."Id", "a"."AccessFailedCount", "a"."ConcurrencyStamp", "a"."CreatedAt", "a"."Email", "a"."EmailConfirmed", "a"."ExternalProviderId", "a"."FullName", "a"."IsActive", "a"."LockoutEnabled", "a"."LockoutEnd", "a"."NormalizedEmail", "a"."NormalizedUserName", "a"."PasswordHash", "a"."PhoneNumber", "a"."PhoneNumberConfirmed", "a"."ProfileImage", "a"."Provider", "a"."SecurityStamp", "a"."StorageLimit", "a"."StorageUsed", "a"."TwoFactorEnabled", "a"."UpdatedAt", "a"."UserName"
+FROM "AspNetUsers" AS "a"
+WHERE "a"."NormalizedEmail" = @__normalizedEmail_0
+LIMIT 2
+2026-10-07 22:32:58.366 +03:00 [INF] Starting Digital Library API
+2026-10-07 22:32:58.451 +03:00 [INF] Now listening on: http://0.0.0.0:5199
+2026-10-07 22:32:58.455 +03:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-10-07 22:32:58.456 +03:00 [INF] Hosting environment: Development
+2026-10-07 22:32:58.458 +03:00 [INF] Content root path: C:\Users\Nasser\Projects\DigitalLibrary\src\Library.API
+2026-10-07 22:34:34.692 +03:00 [INF] Application is shutting down...

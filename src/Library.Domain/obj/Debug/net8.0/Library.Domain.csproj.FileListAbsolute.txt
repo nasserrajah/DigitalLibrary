@@ -1,0 +1,12 @@
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\bin\Debug\net8.0\Library.Domain.deps.json
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\bin\Debug\net8.0\Library.Domain.dll
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\bin\Debug\net8.0\Library.Domain.pdb
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\obj\Debug\net8.0\Library.Domain.csproj.AssemblyReference.cache
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\obj\Debug\net8.0\Library.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\obj\Debug\net8.0\Library.Domain.AssemblyInfoInputs.cache
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\obj\Debug\net8.0\Library.Domain.AssemblyInfo.cs
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\obj\Debug\net8.0\Library.Domain.csproj.CoreCompileInputs.cache
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\obj\Debug\net8.0\Library.Domain.dll
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\obj\Debug\net8.0\refint\Library.Domain.dll
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\obj\Debug\net8.0\Library.Domain.pdb
+C:\Users\Nasser\Projects\DigitalLibrary\src\Library.Domain\obj\Debug\net8.0\ref\Library.Domain.dll

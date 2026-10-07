@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Library.API/Library.API.csproj" />
+    <Project Path="src/Library.Application/Library.Application.csproj" />
+    <Project Path="src/Library.Domain/Library.Domain.csproj" />
+    <Project Path="src/Library.Infrastructure/Library.Infrastructure.csproj" />
+    <Project Path="src/Library.Shared/Library.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Library.IntegrationTests/Library.IntegrationTests.csproj" />
+    <Project Path="tests/Library.UnitTests/Library.UnitTests.csproj" />
+  </Folder>
+  <Project Path="DigitalLibrary.csproj" />
+</Solution>
