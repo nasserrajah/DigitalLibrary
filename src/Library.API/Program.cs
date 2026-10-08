@@ -10,10 +10,12 @@ using Library.Infrastructure.Identity;
 using Library.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ---------- Environment Variables (for MonsterASP / IIS) ----------
+builder.Configuration.AddEnvironmentVariables();
 
 // ---------- Logging ----------
 Log.Logger = new LoggerConfiguration()
@@ -58,8 +60,9 @@ builder.Services.AddAuthorization();
 
 // ---------- CORS ----------
 builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p
-    .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? new[] { "*" })
-    .AllowAnyHeader().AllowAnyMethod()));
+    .AllowAnyOrigin()
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
 
 // ---------- Swagger ----------
 builder.Services.AddSwaggerWithJwt();
@@ -69,13 +72,20 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Swagger:Enabled"))
+// ✅ Swagger مُفعّل دائماً (للتطوير والاختبار)
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Digital Library API v1"));
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Digital Library API v1");
+    c.RoutePrefix = "swagger";
+});
+
+// ⚠️ على MonsterASP، IIS يتولى HTTPS — لا نُجبر إعادة التوجيه
+if (!app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -91,4 +101,4 @@ using (var scope = app.Services.CreateScope())
 Log.Information("Starting Digital Library API");
 app.Run();
 
-public partial class Program { } // for integration tests
+public partial class Program { }
