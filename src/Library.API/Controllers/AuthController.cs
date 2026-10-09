@@ -48,13 +48,14 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { }, r.Message));
     }
 
-    [HttpPost("forgot-password")]
-    [AllowAnonymous]
-    public async Task<ActionResult<ApiResponse<object>>> Forgot(ForgotPasswordRequest req, CancellationToken ct)
-    {
-        var r = await _auth.ForgotPasswordAsync(req.Email, ct);
-        return Ok(ApiResponse<object>.Ok(new { }, r.Message));
-    }
+[HttpPost("forgot-password")]
+[AllowAnonymous]
+public async Task<ActionResult<ApiResponse<object>>> Forgot(
+    ForgotPasswordRequest req, CancellationToken ct)
+{
+    var r = await _auth.ForgotPasswordAsync(req.Email, ct);
+    return Ok(ApiResponse<object>.Ok(r.Data ?? new { }, r.Message));
+}
 
     [HttpPost("reset-password")]
     [AllowAnonymous]

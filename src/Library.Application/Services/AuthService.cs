@@ -79,15 +79,26 @@ public class AuthService : IAuthService
         if (stored is not null) { stored.RevokedAt = DateTime.UtcNow; await _db.SaveChangesAsync(ct); }
         return Result.Ok("Logged out");
     }
-
-    public async Task<Result> ForgotPasswordAsync(string email, CancellationToken ct = default)
+public async Task<Result<object>> ForgotPasswordAsync(string email, CancellationToken ct = default)
+{
+    var user = await _users.FindByEmailAsync(email);
+    if (user is null)
     {
-        var user = await _users.FindByEmailAsync(email);
-        if (user is null) return Result.Ok("If email exists, reset link sent."); // don't leak
-        var token = await _users.GeneratePasswordResetTokenAsync(user);
-        _log.LogInformation("Password reset token for {Email}: {Token}", email, token);
-        return Result.Ok("If email exists, reset link sent.");
+        return Result<object>.Ok(new { }, "If email exists, reset link sent.");
     }
+
+    var token = await _users.GeneratePasswordResetTokenAsync(user);
+    _log.LogInformation("Password reset requested for {Email}", email);
+
+    return Result<object>.Ok(
+        new
+        {
+            email = email,
+            token = token,
+            devNote = "DEV MODE: Token returned for testing. Use in /reset-password."
+        },
+        "Reset link generated.");
+}
 
     public async Task<Result> ResetPasswordAsync(ResetPasswordRequest req, CancellationToken ct = default)
     {
