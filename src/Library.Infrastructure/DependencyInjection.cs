@@ -22,7 +22,7 @@ public static class DependencyInjection
         {
             opt.Password.RequiredLength = 8;
             opt.User.RequireUniqueEmail = true;
-            opt.SignIn.RequireConfirmedEmail = false; // flip in prod
+            opt.SignIn.RequireConfirmedEmail = false;
             opt.Lockout.MaxFailedAccessAttempts = 5;
         })
         .AddRoles<IdentityRole<Guid>>()
@@ -37,9 +37,14 @@ public static class DependencyInjection
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IEmailService, SmtpEmailService>();
 
+        // ═══════════ External Providers ═══════════
+        // Google — يستخدم Google.Apis.Auth (لا يحتاج HttpClient)
+        services.AddScoped<IExternalAuthProvider, GoogleAuthProvider>();
+
+        // Facebook — يحتاج HttpClient عبر typed client
         services.AddHttpClient<FacebookAuthProvider>();
-        services.AddScoped<IExternalAuthProvider, GoogleAuthProvider>(); // default google
-        services.AddScoped<FacebookAuthProvider>();
+        services.AddScoped<IExternalAuthProvider>(sp =>
+            sp.GetRequiredService<FacebookAuthProvider>());
 
         return services;
     }
