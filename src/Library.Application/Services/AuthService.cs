@@ -108,7 +108,7 @@ public class AuthService : IAuthService
     }
 
     // ═══════════════════════ Forgot Password ═══════════════════════
-    public async Task<Result<object>> ForgotPasswordAsync(string email, CancellationToken ct = default)
+        public async Task<Result<object>> ForgotPasswordAsync(string email, CancellationToken ct = default)
     {
         var user = await _users.FindByEmailAsync(email);
         if (user is null)
@@ -117,61 +117,83 @@ public class AuthService : IAuthService
             return Result<object>.Ok(new { }, "If email exists, reset link sent.");
         }
 
-        var token = await _users.GeneratePasswordResetTokenAsync(user);
-        _log.LogInformation("Password reset requested for {Email}", email);
+        // ═══════════ 1. إنشاء كلمة مرور جديدة مؤقتة ═══════════
+        var newPassword = GenerateTemporaryPassword();
 
-        var encodedEmail = Uri.EscapeDataString(email);
-        var encodedToken = Uri.EscapeDataString(token);
+        // ═══════════ 2. إعادة تعيين كلمة المرور في Identity ═══════════
+        var resetToken = await _users.GeneratePasswordResetTokenAsync(user);
+        var resetResult = await _users.ResetPasswordAsync(user, resetToken, newPassword);
 
-        var appLink = $"smartlibrary://reset-password?email={encodedEmail}&token={encodedToken}";
-        var webLink = $"https://smartlib-api.runasp.net/reset-password?email={encodedEmail}&token={encodedToken}";
+        if (!resetResult.Succeeded)
+        {
+            _log.LogError("Failed to reset password for {Email}: {Errors}",
+                email, string.Join(", ", resetResult.Errors.Select(e => e.Description)));
 
+            return Result<object>.Fail("Failed to reset password. Try again later.");
+        }
+
+        _log.LogInformation("New password generated for {Email}", email);
+
+        // ═══════════ 3. إرسال البريد مع كلمة المرور الجديدة ═══════════
         var htmlBody = $@"
 <!DOCTYPE html>
 <html dir=""rtl"" lang=""ar"">
 <head><meta charset=""UTF-8""></head>
-<body style=""font-family: Arial, Tahoma, sans-serif; background: #f5f5f5; margin: 0; padding: 20px;"">
-  <div style=""max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"">
-    <div style=""text-align: center; margin-bottom: 24px;"">
-      <div style=""width: 64px; height: 64px; background: #1DB9A8; border-radius: 16px; margin: 0 auto; line-height: 64px; color: white; font-size: 32px;"">📚</div>
-      <h1 style=""color: #1DB9A8; margin: 16px 0 8px 0; font-size: 24px;"">Smart Library</h1>
-    </div>
+<body style=""margin:0; padding:0; background:#f4f4f4; font-family: Arial, sans-serif;"">
+<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""background:#f4f4f4; padding:20px 0;"">
+  <tr>
+    <td align=""center"">
+      <table role=""presentation"" width=""600"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""background:#ffffff; border-radius:8px; padding:40px; max-width:600px;"">
+        <tr>
+          <td align=""center"" style=""padding-bottom:30px; border-bottom:1px solid #eeeeee;"">
+            <h1 style=""color:#1DB9A8; margin:0; font-size:28px;"">Smart Library</h1>
+            <p style=""color:#888; margin:5px 0 0 0; font-size:13px;"">مكتبتك الرقمية</p>
+          </td>
+        </tr>
+        <tr>
+          <td style=""padding:30px 0 0 0;"">
+            <h2 style=""color:#333; font-size:20px; margin:0 0 20px 0;"">كلمة المرور الجديدة</h2>
 
-    <h2 style=""color: #333; font-size: 20px;"">إعادة تعيين كلمة المرور</h2>
+            <p style=""color:#555; font-size:15px; line-height:1.6; margin:0 0 20px 0;"">
+              مرحباً <strong>{user.FullName}</strong>,
+            </p>
 
-    <p style=""color: #555; font-size: 15px; line-height: 1.6;"">عزيزي <strong>{user.FullName}</strong>,</p>
+            <p style=""color:#555; font-size:15px; line-height:1.6; margin:0 0 25px 0;"">
+              لقد طلبت إعادة تعيين كلمة المرور. استخدم كلمة المرور التالية لتسجيل الدخول:
+            </p>
 
-    <p style=""color: #555; font-size: 15px; line-height: 1.6;"">
-      لقد طلبت إعادة تعيين كلمة المرور لحسابك في <strong>Smart Library</strong>.
-    </p>
+            <div style=""background:#f0faf8; border:2px dashed #1DB9A8; border-radius:10px; padding:25px; text-align:center; margin:0 0 25px 0;"">
+              <p style=""color:#888; font-size:13px; margin:0 0 10px 0;"">كلمة المرور الجديدة</p>
+              <div style=""font-family: 'Courier New', monospace; font-size:24px; font-weight:bold; color:#1DB9A8; letter-spacing:3px; word-break:break-all;"">
+                {newPassword}
+              </div>
+            </div>
 
-    <p style=""color: #555; font-size: 15px; line-height: 1.6;"">
-      اضغط على الزر التالي لإعادة التعيين:
-    </p>
+            <p style=""color:#555; font-size:15px; line-height:1.6; margin:0 0 15px 0;"">
+              انسخها والصقها في شاشة تسجيل الدخول.
+            </p>
 
-    <div style=""text-align: center; margin: 30px 0;"">
-      <a href=""{appLink}"" style=""background: #1DB9A8; color: white; padding: 14px 40px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block; font-size: 16px;"">
-        إعادة تعيين كلمة المرور
-      </a>
-    </div>
+            <p style=""color:#d9534f; font-size:14px; line-height:1.6; margin:0 0 20px 0; padding:15px; background:#fdf2f2; border-radius:6px;"">
+              🔒 <strong>مهم:</strong> بعد تسجيل الدخول، يُفضّل تغيير كلمة المرور إلى كلمة تتذكرها.
+            </p>
 
-    <p style=""color: #888; font-size: 13px; line-height: 1.6;"">
-      إذا لم يعمل الزر، استخدم هذا الرابط:
-    </p>
-    <p style=""word-break: break-all; background: #f9f9f9; padding: 12px; border-radius: 6px; color: #1DB9A8; font-size: 12px;"">{webLink}</p>
+            <hr style=""border:none; border-top:1px solid #eeeeee; margin:30px 0;"">
 
-    <hr style=""border: none; border-top: 1px solid #eee; margin: 30px 0;"" />
+            <p style=""color:#999; font-size:12px; line-height:1.6; margin:0 0 10px 0;"">
+              إذا لم تطلب هذا، يمكنك تجاهل الرسالة، لكن كلمة مرورك تغيّرت فعلاً.
+              في هذه الحالة، تواصل مع الدعم.
+            </p>
 
-    <p style=""color: #999; font-size: 12px; line-height: 1.6;"">
-      ⚠️ الرابط صالح لمرة واحدة فقط.<br/>
-      إذا لم تطلب هذا، يمكنك تجاهل الرسالة بأمان.
-    </p>
-
-    <p style=""color: #999; font-size: 12px;"">
-      شكراً،<br/>
-      فريق Smart Library
-    </p>
-  </div>
+            <p style=""color:#999; font-size:12px; margin:20px 0 0 0;"">
+              شكراً،<br>
+              فريق Smart Library
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 </body>
 </html>";
 
@@ -179,19 +201,60 @@ public class AuthService : IAuthService
         {
             await _email.SendAsync(
                 email,
-                "إعادة تعيين كلمة المرور - Smart Library",
+                "كلمة المرور الجديدة - Smart Library",
                 htmlBody,
                 ct);
 
-            return Result<object>.Ok(new { email }, "Reset link sent to your email.");
+            return Result<object>.Ok(
+                new { email },
+                "New password sent to your email.");
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "Failed to send reset email to {Email}", email);
-            return Result<object>.Fail("Failed to send reset email. Try again later.");
+            _log.LogError(ex, "Failed to send new password email to {Email}", email);
+
+            // ⚠️ مهم: إذا فشل الإرسال، أعد كلمة المرور الأصلية؟ لا يمكن. 
+            // لكن على الأقل لا نترك المستخدم بلا كلمة مرور — سنعرض الخطأ بوضوح.
+            var detail = ex.InnerException?.Message ?? ex.Message;
+            return Result<object>.Fail($"Email failed: {detail}");
         }
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // توليد كلمة مرور عشوائية قوية
+    // ═══════════════════════════════════════════════════════════
+    private static string GenerateTemporaryPassword()
+    {
+        // نضمن وجود: حرف كبير + صغير + رقم + رمز خاص
+        const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        const string lower = "abcdefghijkmnpqrstuvwxyz";
+        const string digits = "23456789";
+        const string symbols = "!@#$%&*";
+
+        var random = new Random();
+        var password = new char[10];
+
+        // 2 أحرف كبيرة
+        password[0] = upper[random.Next(upper.Length)];
+        password[1] = upper[random.Next(upper.Length)];
+
+        // 3 أحرف صغيرة
+        password[2] = lower[random.Next(lower.Length)];
+        password[3] = lower[random.Next(lower.Length)];
+        password[4] = lower[random.Next(lower.Length)];
+
+        // 3 أرقام
+        password[5] = digits[random.Next(digits.Length)];
+        password[6] = digits[random.Next(digits.Length)];
+        password[7] = digits[random.Next(digits.Length)];
+
+        // 2 رموز
+        password[8] = symbols[random.Next(symbols.Length)];
+        password[9] = symbols[random.Next(symbols.Length)];
+
+        // خلط عشوائي
+        return new string(password.OrderBy(_ => random.Next()).ToArray());
+    }
     // ═══════════════════════ Reset Password ═══════════════════════
     public async Task<Result> ResetPasswordAsync(ResetPasswordRequest req, CancellationToken ct = default)
     {
