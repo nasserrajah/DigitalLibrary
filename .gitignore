@@ -28,7 +28,6 @@ App_Data/
 logs/
 
 # Secrets & Production Config
-appsettings.Production.json
 appsettings.Local.json
 secrets.json
 .env
@@ -48,3 +47,9 @@ desktop.ini
 *.coverage
 *.coveragexml
 '@ | Set-Content -Path ".gitignore" -Encoding UTF8
+
+# Secrets
+appsettings.Development.json
+appsettings.Production.json
+*.pubxml
+*.PublishSettings

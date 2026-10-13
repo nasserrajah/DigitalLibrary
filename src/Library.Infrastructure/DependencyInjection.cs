@@ -35,7 +35,7 @@ public static class DependencyInjection
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
-        services.AddScoped<IEmailService, NullEmailService>();
+        services.AddScoped<IEmailService, SmtpEmailService>();
 
         services.AddHttpClient<FacebookAuthProvider>();
         services.AddScoped<IExternalAuthProvider, GoogleAuthProvider>(); // default google
