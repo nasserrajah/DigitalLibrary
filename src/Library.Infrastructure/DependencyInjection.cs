@@ -36,6 +36,13 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IEmailService, SmtpEmailService>();
+        
+        services.AddHttpClient<Library.Infrastructure.ExternalApis.IBookMetadataService,
+                      Library.Infrastructure.ExternalApis.OpenLibraryService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
 
         // ═══════════ External Providers ═══════════
         // Google — يستخدم Google.Apis.Auth (لا يحتاج HttpClient)
