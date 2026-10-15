@@ -24,6 +24,9 @@ public class Book : AuditableEntity
     public Guid CategoryId { get; set; }
     public Category? Category { get; set; }
 
+    public int? GutenbergId { get; set; }
+    public string? DownloadUrl { get; set; }
+
     public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
     public ICollection<UserLibrary> InLibraries { get; set; } = new List<UserLibrary>();
 }

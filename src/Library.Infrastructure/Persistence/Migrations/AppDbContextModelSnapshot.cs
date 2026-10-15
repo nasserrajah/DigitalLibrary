@@ -140,6 +140,9 @@ namespace Library.Infrastructure.Persistence.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DownloadUrl")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("FileName")
                         .HasColumnType("TEXT");
 
@@ -150,6 +153,9 @@ namespace Library.Infrastructure.Persistence.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Format")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("GutenbergId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ISBN")

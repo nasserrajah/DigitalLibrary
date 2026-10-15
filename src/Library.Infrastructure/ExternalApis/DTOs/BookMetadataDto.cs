@@ -13,4 +13,8 @@ public class BookMetadataDto
     public List<string> Subjects { get; set; } = new();
     public int? NumberOfPages { get; set; }
     public string? Source { get; set; } = "OpenLibrary";
+
+
+    public int? GutenbergId { get; set; }
+    public string? DownloadUrl { get; set; }
 }

@@ -1,6 +1,4 @@
 using Library.Application.Common;
-using Library.Application.DTOs.Books;
-using Library.Application.Interfaces;
 using Library.Infrastructure.ExternalApis;
 using Library.Infrastructure.ExternalApis.DTOs;
 using Library.Infrastructure.Persistence;
@@ -17,91 +15,131 @@ namespace Library.API.Controllers;
 public class MetadataController : ControllerBase
 {
     private readonly IBookMetadataService _metadata;
+    private readonly IGutendexService _gutenberg;
     private readonly AppDbContext _db;
     private readonly ILogger<MetadataController> _log;
 
     public MetadataController(
         IBookMetadataService metadata,
+        IGutendexService gutenberg,
         AppDbContext db,
         ILogger<MetadataController> log)
     {
         _metadata = metadata;
+        _gutenberg = gutenberg;
         _db = db;
         _log = log;
     }
 
-    /// <summary>
-    /// البحث في Open Library
-    /// GET /api/metadata/search?q=programming&limit=10
-    /// </summary>
+    // ═══════════════════════════════════════════════════════
+    // Open Library Endpoints (كما هو موجود)
+    // ═══════════════════════════════════════════════════════
+
     [HttpGet("search")]
     public async Task<IActionResult> Search(
-        [FromQuery] string q,
-        [FromQuery] int limit = 10,
-        CancellationToken ct = default)
+        [FromQuery] string q, [FromQuery] int limit = 10, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(q))
             return BadRequest(ApiResponse<object>.Fail("Query is required"));
 
         var results = await _metadata.SearchBooksAsync(q, limit, ct);
+        return Ok(ApiResponse<List<BookMetadataDto>>.Ok(results, $"Found {results.Count} books"));
+    }
+
+    [HttpGet("isbn/{isbn}")]
+    public async Task<IActionResult> GetByIsbn(string isbn, CancellationToken ct)
+    {
+        var result = await _metadata.GetByIsbnAsync(isbn, ct);
+        if (result == null) return NotFound(ApiResponse<object>.Fail("Book not found"));
+        return Ok(ApiResponse<BookMetadataDto>.Ok(result));
+    }
+
+    [HttpGet("subject/{subject}")]
+    public async Task<IActionResult> GetBySubject(
+        string subject, [FromQuery] int limit = 20, CancellationToken ct = default)
+    {
+        var results = await _metadata.GetBooksBySubjectAsync(subject, limit, ct);
+        return Ok(ApiResponse<List<BookMetadataDto>>.Ok(results, $"Found {results.Count}"));
+    }
+
+    [HttpPost("import-category")]
+    public async Task<IActionResult> ImportCategory(
+        [FromBody] ImportCategoryRequest req, CancellationToken ct)
+    {
+        var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == req.CategoryId, ct);
+        if (category == null)
+            return BadRequest(ApiResponse<object>.Fail("التصنيف غير موجود"));
+
+        var booksMetadata = await _metadata.GetBooksBySubjectAsync(req.Subject, req.Limit, ct);
+        if (!booksMetadata.Any())
+            return Ok(ApiResponse<object>.Ok(new { imported = 0, skipped = 0 }, "لا كتب"));
+
+        return await ImportBatchAsync(booksMetadata, category, ct);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // 🆕 Project Gutenberg Endpoints
+    // ═══════════════════════════════════════════════════════
+
+    /// <summary>
+    /// بحث في Project Gutenberg
+    /// GET /api/metadata/gutenberg/search?q=shakespeare
+    /// </summary>
+    [HttpGet("gutenberg/search")]
+    public async Task<IActionResult> GutenbergSearch(
+        [FromQuery] string q, [FromQuery] int limit = 20, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(q))
+            return BadRequest(ApiResponse<object>.Fail("Query is required"));
+
+        var results = await _gutenberg.SearchAsync(q, limit, ct);
+        return Ok(ApiResponse<List<BookMetadataDto>>.Ok(results,
+            $"Found {results.Count} books with downloadable files"));
+    }
+
+    /// <summary>
+    /// جلب كتب Gutenberg حسب الموضوع
+    /// GET /api/metadata/gutenberg/topic/fiction
+    /// </summary>
+    [HttpGet("gutenberg/topic/{topic}")]
+    public async Task<IActionResult> GutenbergByTopic(
+        string topic, [FromQuery] int limit = 20, CancellationToken ct = default)
+    {
+        var results = await _gutenberg.GetByTopicAsync(topic, limit, ct);
         return Ok(ApiResponse<List<BookMetadataDto>>.Ok(results,
             $"Found {results.Count} books"));
     }
 
     /// <summary>
-    /// جلب بيانات كتاب بـ ISBN
-    /// GET /api/metadata/isbn/9780140328721
+    /// استيراد دفعة من Gutenberg إلى تصنيف معيّن
+    /// POST /api/metadata/gutenberg/import-category
+    /// Body: { "topic": "fiction", "categoryId": "guid", "limit": 10 }
     /// </summary>
-    [HttpGet("isbn/{isbn}")]
-    public async Task<IActionResult> GetByIsbn(string isbn, CancellationToken ct)
+    [HttpPost("gutenberg/import-category")]
+    public async Task<IActionResult> GutenbergImportCategory(
+        [FromBody] ImportCategoryRequest req, CancellationToken ct)
     {
-        var result = await _metadata.GetByIsbnAsync(isbn, ct);
-        if (result == null)
-            return NotFound(ApiResponse<object>.Fail("Book not found"));
-
-        return Ok(ApiResponse<BookMetadataDto>.Ok(result));
-    }
-
-    /// <summary>
-    /// جلب كتب تصنيف معيّن من Open Library
-    /// GET /api/metadata/subject/programming?limit=20
-    /// </summary>
-    [HttpGet("subject/{subject}")]
-    public async Task<IActionResult> GetBySubject(
-        string subject,
-        [FromQuery] int limit = 20,
-        CancellationToken ct = default)
-    {
-        var results = await _metadata.GetBooksBySubjectAsync(subject, limit, ct);
-        return Ok(ApiResponse<List<BookMetadataDto>>.Ok(results,
-            $"Found {results.Count} books for '{subject}'"));
-    }
-
-    /// <summary>
-    /// استيراد دفعة كتب تصنيف معيّن إلى قاعدة البيانات
-    /// POST /api/metadata/import-category
-    /// Body: { "subject": "programming", "categoryId": "guid", "limit": 10 }
-    /// </summary>
-    [HttpPost("import-category")]
-    public async Task<IActionResult> ImportCategory(
-        [FromBody] ImportCategoryRequest req,
-        CancellationToken ct)
-    {
-        // التحقق من التصنيف
-        var category = await _db.Categories
-            .FirstOrDefaultAsync(c => c.Id == req.CategoryId, ct);
-
+        var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == req.CategoryId, ct);
         if (category == null)
             return BadRequest(ApiResponse<object>.Fail("التصنيف غير موجود"));
 
-        // جلب الكتب من Open Library
-        var booksMetadata = await _metadata.GetBooksBySubjectAsync(
-            req.Subject, req.Limit, ct);
-
+        var booksMetadata = await _gutenberg.GetByTopicAsync(req.Subject, req.Limit, ct);
         if (!booksMetadata.Any())
-            return Ok(ApiResponse<object>.Ok(new { imported = 0 },
-                "لا كتب متاحة لهذا الموضوع"));
+            return Ok(ApiResponse<object>.Ok(new { imported = 0, skipped = 0 },
+                "لا كتب متاحة لهذا الموضوع في Gutenberg"));
 
+        return await ImportBatchAsync(booksMetadata, category, ct);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Shared Import Logic
+    // ═══════════════════════════════════════════════════════
+
+    private async Task<IActionResult> ImportBatchAsync(
+        List<BookMetadataDto> booksMetadata,
+        Library.Domain.Entities.Category category,
+        CancellationToken ct)
+    {
         var imported = 0;
         var skipped = 0;
 
@@ -109,22 +147,19 @@ public class MetadataController : ControllerBase
         {
             try
             {
-                // تحقق من عدم التكرار (بالعنوان + المؤلف)
+                // تحقق من عدم التكرار
                 var exists = await _db.Books.AnyAsync(b =>
                     b.Title == meta.Title && b.Author == meta.Author, ct);
-
                 if (exists) { skipped++; continue; }
 
-                // تحقق من ISBN مكرر
-                if (!string.IsNullOrEmpty(meta.ISBN))
+                if (meta.GutenbergId.HasValue)
                 {
-                    var isbnExists = await _db.Books
-                        .AnyAsync(b => b.ISBN == meta.ISBN, ct);
-                    if (isbnExists) { skipped++; continue; }
+                    var gExists = await _db.Books
+                        .AnyAsync(b => b.GutenbergId == meta.GutenbergId, ct);
+                    if (gExists) { skipped++; continue; }
                 }
 
-                // أضف الكتاب
-                var book = new Domain.Entities.Book
+                var book = new Library.Domain.Entities.Book
                 {
                     Title = meta.Title,
                     Author = meta.Author,
@@ -138,8 +173,11 @@ public class MetadataController : ControllerBase
                     CoverImage = meta.CoverUrl,
                     CategoryId = category.Id,
                     IsPublished = true,
-                    Format = Domain.Enums.BookFormat.Pdf,
-                    FileSize = 0
+                    Format = DetermineFormat(meta.DownloadUrl),
+                    FileSize = 0,
+                    // 🆕
+                    GutenbergId = meta.GutenbergId,
+                    DownloadUrl = meta.DownloadUrl
                 };
 
                 _db.Books.Add(book);
@@ -147,7 +185,7 @@ public class MetadataController : ControllerBase
             }
             catch (Exception ex)
             {
-                _log.LogWarning(ex, "Failed to import book: {Title}", meta.Title);
+                _log.LogWarning(ex, "Failed to import: {Title}", meta.Title);
                 skipped++;
             }
         }
@@ -161,59 +199,21 @@ public class MetadataController : ControllerBase
         {
             imported,
             skipped,
-            category = category.Name,
-            subject = req.Subject
+            category = category.Name
         }, $"تم استيراد {imported} كتاب إلى تصنيف {category.Name}"));
     }
 
-    /// <summary>
-    /// استيراد كتاب واحد بالـ ISBN
-    /// POST /api/metadata/import-isbn
-    /// Body: { "isbn": "9780140328721", "categoryId": "guid" }
-    /// </summary>
-    [HttpPost("import-isbn")]
-    public async Task<IActionResult> ImportByIsbn(
-        [FromBody] ImportByIsbnRequest req,
-        CancellationToken ct)
+    private static Library.Domain.Enums.BookFormat DetermineFormat(string? url)
     {
-        var category = await _db.Categories
-            .FirstOrDefaultAsync(c => c.Id == req.CategoryId, ct);
-        if (category == null)
-            return BadRequest(ApiResponse<object>.Fail("التصنيف غير موجود"));
-
-        var meta = await _metadata.GetByIsbnAsync(req.Isbn, ct);
-        if (meta == null)
-            return NotFound(ApiResponse<object>.Fail("لم يُعثر على الكتاب"));
-
-        var exists = await _db.Books.AnyAsync(b => b.ISBN == meta.ISBN, ct);
-        if (exists)
-            return BadRequest(ApiResponse<object>.Fail("الكتاب موجود مسبقاً"));
-
-        var book = new Domain.Entities.Book
-        {
-            Title = meta.Title,
-            Author = meta.Author,
-            Description = meta.Description,
-            Publisher = meta.Publisher,
-            PublicationDate = meta.PublishYear.HasValue
-                ? new DateTime(meta.PublishYear.Value, 1, 1)
-                : null,
-            ISBN = meta.ISBN,
-            Language = meta.Language ?? "en",
-            CoverImage = meta.CoverUrl,
-            CategoryId = category.Id,
-            IsPublished = true,
-            Format = Domain.Enums.BookFormat.Pdf,
-            FileSize = 0
-        };
-
-        _db.Books.Add(book);
-        await _db.SaveChangesAsync(ct);
-
-        return Ok(ApiResponse<object>.Ok(new { bookId = book.Id },
-            "تم استيراد الكتاب بنجاح"));
+        if (string.IsNullOrEmpty(url)) return Library.Domain.Enums.BookFormat.Pdf;
+        if (url.Contains(".epub", StringComparison.OrdinalIgnoreCase))
+            return Library.Domain.Enums.BookFormat.Epub;
+        if (url.Contains(".pdf", StringComparison.OrdinalIgnoreCase))
+            return Library.Domain.Enums.BookFormat.Pdf;
+        if (url.Contains(".txt", StringComparison.OrdinalIgnoreCase))
+            return Library.Domain.Enums.BookFormat.Txt;
+        return Library.Domain.Enums.BookFormat.Pdf;
     }
 }
 
 public record ImportCategoryRequest(string Subject, Guid CategoryId, int Limit = 10);
-public record ImportByIsbnRequest(string Isbn, Guid CategoryId);

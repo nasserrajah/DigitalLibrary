@@ -16,8 +16,17 @@ public class MappingProfile : Profile
         CreateMap<ApplicationUser, UserDto>()
             .ForCtorParam("Provider", o => o.MapFrom(s => s.Provider.ToString()));
 
+        // ═══════════════════════════════════════════════════════
+        // ✅ Book → BookDto (نسخة واحدة فقط مع Gutenberg)
+        // ═══════════════════════════════════════════════════════
         CreateMap<Book, BookDto>()
-            .ForCtorParam("CategoryName", o => o.MapFrom(s => s.Category != null ? s.Category.Name : null));
+            .ForCtorParam("CategoryName", o => o.MapFrom(s => s.Category != null ? s.Category.Name : null))
+            .ForCtorParam("GutenbergId", o => o.MapFrom(s => s.GutenbergId))
+            .ForCtorParam("DownloadUrl", o => o.MapFrom(s => s.DownloadUrl));
+
+        // ═══════════════════════════════════════════════════════
+        // ✅ Book → BookSummaryDto (بدون Gutenberg — مختصر)
+        // ═══════════════════════════════════════════════════════
         CreateMap<Book, BookSummaryDto>()
             .ForCtorParam("CategoryName", o => o.MapFrom(s => s.Category != null ? s.Category.Name : null));
 
@@ -26,21 +35,21 @@ public class MappingProfile : Profile
         CreateMap<Category, CategorySummaryDto>();
 
         CreateMap<Favorite, FavoriteDto>()
-            .ForCtorParam("BookId",   o => o.MapFrom(s => s.BookId))
-            .ForCtorParam("Title",    o => o.MapFrom(s => s.Book.Title))
-            .ForCtorParam("Author",   o => o.MapFrom(s => s.Book.Author))
+            .ForCtorParam("BookId",     o => o.MapFrom(s => s.BookId))
+            .ForCtorParam("Title",      o => o.MapFrom(s => s.Book.Title))
+            .ForCtorParam("Author",     o => o.MapFrom(s => s.Book.Author))
             .ForCtorParam("CoverImage", o => o.MapFrom(s => s.Book.CoverImage))
-            .ForCtorParam("CreatedAt", o => o.MapFrom(s => s.CreatedAt));
+            .ForCtorParam("CreatedAt",  o => o.MapFrom(s => s.CreatedAt));
 
         CreateMap<UserLibrary, LibraryItemDto>()
-            .ForCtorParam("Id", o => o.MapFrom(s => s.Id))
-            .ForCtorParam("BookId", o => o.MapFrom(s => s.BookId))
-            .ForCtorParam("Title", o => o.MapFrom(s => s.Book.Title))
-            .ForCtorParam("Author", o => o.MapFrom(s => s.Book.Author))
+            .ForCtorParam("Id",         o => o.MapFrom(s => s.Id))
+            .ForCtorParam("BookId",     o => o.MapFrom(s => s.BookId))
+            .ForCtorParam("Title",      o => o.MapFrom(s => s.Book.Title))
+            .ForCtorParam("Author",     o => o.MapFrom(s => s.Book.Author))
             .ForCtorParam("CoverImage", o => o.MapFrom(s => s.Book.CoverImage))
-            .ForCtorParam("FileSize", o => o.MapFrom(s => s.FileSize))
-            .ForCtorParam("Format", o => o.MapFrom(s => s.Book.Format))
-            .ForCtorParam("AddedAt", o => o.MapFrom(s => s.CreatedAt));
+            .ForCtorParam("FileSize",   o => o.MapFrom(s => s.FileSize))
+            .ForCtorParam("Format",     o => o.MapFrom(s => s.Book.Format))
+            .ForCtorParam("AddedAt",    o => o.MapFrom(s => s.CreatedAt));
 
         CreateMap<Notification, NotificationDto>();
     }
