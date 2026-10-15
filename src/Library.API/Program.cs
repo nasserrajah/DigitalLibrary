@@ -66,6 +66,16 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
+
+// HttpClient للـ Proxy
+builder.Services.AddHttpClient("GutenbergProxy", client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(5);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("SmartLibrary/1.0 (contact@smartlib.local)");
+    client.DefaultRequestHeaders.Add("Accept", "*/*");
+});
+
+
 // ---------- CORS ----------
 builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p
     .AllowAnyOrigin()
