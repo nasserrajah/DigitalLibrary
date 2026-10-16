@@ -11,6 +11,10 @@ using Library.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using Library.Application.Interfaces;
+using Library.Infrastructure.AI;
+using Library.Domain.Interfaces;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -84,6 +88,13 @@ builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p
 
 // ---------- Swagger ----------
 builder.Services.AddSwaggerWithJwt();
+
+builder.Services.AddHttpClient<IAiService, GeminiAiService>(client =>
+{
+    client.BaseAddress = new Uri(
+        "https://generativelanguage.googleapis.com/v1beta/");
+    client.Timeout = TimeSpan.FromSeconds(45);
+});
 
 // ---------- Build ----------
 var app = builder.Build();
