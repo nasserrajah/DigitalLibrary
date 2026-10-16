@@ -108,7 +108,7 @@ public class AuthService : IAuthService
     }
 
     // ═══════════════════════ Forgot Password ═══════════════════════
-        public async Task<Result<object>> ForgotPasswordAsync(string email, CancellationToken ct = default)
+    public async Task<Result<object>> ForgotPasswordAsync(string email, CancellationToken ct = default)
     {
         var user = await _users.FindByEmailAsync(email);
         if (user is null)
@@ -213,8 +213,6 @@ public class AuthService : IAuthService
         {
             _log.LogError(ex, "Failed to send new password email to {Email}", email);
 
-            // ⚠️ مهم: إذا فشل الإرسال، أعد كلمة المرور الأصلية؟ لا يمكن. 
-            // لكن على الأقل لا نترك المستخدم بلا كلمة مرور — سنعرض الخطأ بوضوح.
             var detail = ex.InnerException?.Message ?? ex.Message;
             return Result<object>.Fail($"Email failed: {detail}");
         }
@@ -225,7 +223,6 @@ public class AuthService : IAuthService
     // ═══════════════════════════════════════════════════════════
     private static string GenerateTemporaryPassword()
     {
-        // نضمن وجود: حرف كبير + صغير + رقم + رمز خاص
         const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
         const string lower = "abcdefghijkmnpqrstuvwxyz";
         const string digits = "23456789";
@@ -234,27 +231,20 @@ public class AuthService : IAuthService
         var random = new Random();
         var password = new char[10];
 
-        // 2 أحرف كبيرة
         password[0] = upper[random.Next(upper.Length)];
         password[1] = upper[random.Next(upper.Length)];
-
-        // 3 أحرف صغيرة
         password[2] = lower[random.Next(lower.Length)];
         password[3] = lower[random.Next(lower.Length)];
         password[4] = lower[random.Next(lower.Length)];
-
-        // 3 أرقام
         password[5] = digits[random.Next(digits.Length)];
         password[6] = digits[random.Next(digits.Length)];
         password[7] = digits[random.Next(digits.Length)];
-
-        // 2 رموز
         password[8] = symbols[random.Next(symbols.Length)];
         password[9] = symbols[random.Next(symbols.Length)];
 
-        // خلط عشوائي
         return new string(password.OrderBy(_ => random.Next()).ToArray());
     }
+
     // ═══════════════════════ Reset Password ═══════════════════════
     public async Task<Result> ResetPasswordAsync(ResetPasswordRequest req, CancellationToken ct = default)
     {
@@ -291,7 +281,7 @@ public class AuthService : IAuthService
     private async Task<Result<AuthResponse>> ExternalLoginAsync(
         string token, AuthProvider provider, CancellationToken ct)
     {
-        // ✅ الآن يجد المزود الصحيح (Google أو Facebook)
+        // ✅ إيجاد المزود الصحيح (Google أو Facebook)
         var impl = _externalProviders.FirstOrDefault(p =>
             p.GetType().Name.Contains(provider.ToString(), StringComparison.OrdinalIgnoreCase));
 
@@ -309,8 +299,10 @@ public class AuthService : IAuthService
         }
 
         var user = await _users.FindByEmailAsync(info.Email);
+
         if (user is null)
         {
+            // 🆕 مستخدم جديد — نحفظ الصورة من Google/Facebook
             user = new ApplicationUser
             {
                 UserName = info.Email,
@@ -318,8 +310,10 @@ public class AuthService : IAuthService
                 EmailConfirmed = true,
                 FullName = info.FullName,
                 Provider = provider,
-                ExternalProviderId = info.ProviderId
+                ExternalProviderId = info.ProviderId,
+                ProfileImage = info.PictureUrl,   // 🆕
             };
+
             var res = await _users.CreateAsync(user);
             if (!res.Succeeded)
                 return Result<AuthResponse>.Fail("External signup failed",
@@ -327,6 +321,21 @@ public class AuthService : IAuthService
 
             await _users.AddToRoleAsync(user, RoleNames.User);
             _log.LogInformation("New {Provider} user created: {Email}", provider, user.Email);
+        }
+        else
+        {
+            // 🆕 مستخدم موجود — نحدّث الصورة إن لم تكن موجودة
+            // (لا نُغيّر صورة المستخدم إذا رفع صورة يدوية من التطبيق)
+            if (!string.IsNullOrEmpty(info.PictureUrl) &&
+                string.IsNullOrEmpty(user.ProfileImage))
+            {
+                user.ProfileImage = info.PictureUrl;
+                user.Provider = provider;
+                user.ExternalProviderId = info.ProviderId;
+                await _users.UpdateAsync(user);
+                _log.LogInformation("Profile image updated from {Provider} for {Email}",
+                    provider, user.Email);
+            }
         }
 
         return Result<AuthResponse>.Ok(await IssueTokensAsync(user, ct), "Logged in");

@@ -1,16 +1,21 @@
-using System.Net.Http.Json;              // ⬅️ السطر الجديد
+using System.Net.Http.Json;
 using Google.Apis.Auth;
 using Microsoft.Extensions.Options;
 
 namespace Library.Infrastructure.Identity;
 
-public record ExternalUserInfo(string Email, string FullName, string ProviderId);
+public record ExternalUserInfo(
+    string Email,
+    string FullName,
+    string ProviderId,
+    string? PictureUrl = null);   // 🆕 إضافة صورة بروفايل
 
 public interface IExternalAuthProvider
 {
     Task<ExternalUserInfo?> ValidateAsync(string token, CancellationToken ct = default);
 }
 
+// ═══════════════════════ Google ═══════════════════════
 public class GoogleAuthProvider : IExternalAuthProvider
 {
     private readonly GoogleAuthSettings _settings;
@@ -21,29 +26,54 @@ public class GoogleAuthProvider : IExternalAuthProvider
         try
         {
             var payload = await GoogleJsonWebSignature.ValidateAsync(idToken,
-                new GoogleJsonWebSignature.ValidationSettings { Audience = new[] { _settings.ClientId } });
-            return new ExternalUserInfo(payload.Email, payload.Name ?? payload.Email, payload.Subject);
+                new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { _settings.ClientId }
+                });
+
+            return new ExternalUserInfo(
+                payload.Email,
+                payload.Name ?? payload.Email,
+                payload.Subject,
+                payload.Picture);   // 🆕 صورة Google
         }
         catch { return null; }
     }
 }
 
+// ═══════════════════════ Facebook ═══════════════════════
 public class FacebookAuthProvider : IExternalAuthProvider
 {
     private readonly HttpClient _http;
     private readonly FacebookAuthSettings _settings;
+
     public FacebookAuthProvider(HttpClient http, IOptions<FacebookAuthSettings> s)
-    { _http = http; _settings = s.Value; }
+    {
+        _http = http;
+        _settings = s.Value;
+    }
 
     public async Task<ExternalUserInfo?> ValidateAsync(string accessToken, CancellationToken ct = default)
     {
-        var url = $"https://graph.facebook.com/me?fields=id,name,email&access_token={Uri.EscapeDataString(accessToken)}";
+        // 🆕 نطلب صورة بحجم كبير (500x500)
+        var url = $"https://graph.facebook.com/me" +
+                  $"?fields=id,name,email,picture.width(500).height(500)" +
+                  $"&access_token={Uri.EscapeDataString(accessToken)}";
+
         var resp = await _http.GetAsync(url, ct);
         if (!resp.IsSuccessStatusCode) return null;
+
         var json = await resp.Content.ReadFromJsonAsync<FbUser>(cancellationToken: ct);
         if (json?.Email is null) return null;
-        return new ExternalUserInfo(json.Email, json.Name ?? json.Email, json.Id);
+
+        return new ExternalUserInfo(
+            json.Email,
+            json.Name ?? json.Email,
+            json.Id,
+            json.Picture?.Data?.Url);   // 🆕 صورة Facebook
     }
 
-    private record FbUser(string Id, string? Name, string? Email);
+    private record FbUser(string Id, string? Name, string? Email, FbPicture? Picture);
+    private record FbPicture(FbPictureData Data);
+    private record FbPictureData(string Url);
 }
