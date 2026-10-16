@@ -138,7 +138,7 @@ public class UsersController : ControllerBase
                 user.Id,
                 user.FullName,
                 user.Email!,
-                user.ProfileImage,
+                BuildFullImageUrl(user.ProfileImage, Request), 
                 user.Provider.ToString(),
                 user.IsActive,
                 user.StorageUsed,
@@ -153,6 +153,20 @@ public class UsersController : ControllerBase
                 "Failed to upload image. Please try again."));
         }
     }
+
+    private static string? BuildFullImageUrl(string? imageKey, HttpRequest request)
+{
+    if (string.IsNullOrEmpty(imageKey)) return null;
+
+    // إذا كانت صورة خارجية (Google/Facebook)، أرجعها كما هي
+    if (imageKey.StartsWith("http://") || imageKey.StartsWith("https://"))
+        return imageKey;
+
+    // صورة محلية → أضف Base URL
+    var baseUrl = $"{request.Scheme}://{request.Host}";
+    var cleanKey = imageKey.TrimStart('/');
+    return $"{baseUrl}/api/files/{cleanKey}";
+}
 
     // ═══════════════════════════════════════════════════════════════════
     // 🆕 DELETE /api/users/me/profile-image — حذف الصورة الشخصية
