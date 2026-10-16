@@ -36,6 +36,8 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IEmailService, SmtpEmailService>();
+
+        services.AddScoped<IFileStorageService, LocalFileStorageService>();
         
         services.AddHttpClient<Library.Infrastructure.ExternalApis.IBookMetadataService,
                       Library.Infrastructure.ExternalApis.OpenLibraryService>(client =>
