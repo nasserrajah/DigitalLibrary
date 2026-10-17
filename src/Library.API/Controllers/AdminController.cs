@@ -1,63 +1,27 @@
 using Library.Application.Common;
-using Library.Domain.Interfaces;
+using Library.Application.Interfaces;
+using Library.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Library.Infrastructure.Persistence; // تأكد من مسار AppDbContext
 
 namespace Library.API.Controllers;
 
 [ApiController]
-[Route("api/admin/cleanup")]
-[Authorize] // محمي بالتوكن
-public class AdminCleanupController : ControllerBase
+[Route("api/admin")]
+[Authorize(Roles = RoleNames.Admin)]
+public class AdminController : ControllerBase
 {
-    private readonly AppDbContext _db;
-    private readonly ICurrentUserService _me;
+    private readonly IAdminStatsService _stats;
 
-    public AdminCleanupController(AppDbContext db, ICurrentUserService me)
+    public AdminController(IAdminStatsService stats)
     {
-        _db = db;
-        _me = me;
+        _stats = stats;
     }
 
-    [HttpDelete("remove-openlibrary-books")]
-public async Task<ActionResult<ApiResponse<object>>> RemoveOpenLibraryBooks(
-    CancellationToken ct)
-{
-    if (!_me.IsAdmin)
-        return Forbid();
-
-    // 🆕 اكتشف كتب Open Library بأكثر من طريقة
-    var openLibraryBooks = await _db.Books
-        .Where(b =>
-            // 1) Gutenberg (الأحدث)
-            b.GutenbergId != null
-            // 2) روابط Gutenberg
-            || (b.DownloadUrl != null && b.DownloadUrl.Contains("gutenberg"))
-            // 3) غلاف من Open Library
-            || (b.CoverImage != null && b.CoverImage.Contains("openlibrary.org"))
-            // 4) غلاف من Gutenberg
-            || (b.CoverImage != null && b.CoverImage.Contains("gutenberg.org"))
-            // 5) الناشر Project Gutenberg
-            || (b.Publisher != null && b.Publisher.Contains("Gutenberg"))
-            // 6) كتب بلا ملف + حجم 0 (من imports القديمة)
-            || (b.FileSize == 0
-                && string.IsNullOrEmpty(b.FileName)
-                && string.IsNullOrEmpty(b.FilePath)))
-        .ToListAsync(ct);
-
-    if (!openLibraryBooks.Any())
-        return Ok(ApiResponse<object>.Ok(
-            new { deleted = 0 },
-            "No Open Library books found."));
-
-    _db.Books.RemoveRange(openLibraryBooks);
-    await _db.SaveChangesAsync(ct);
-
-    return Ok(ApiResponse<object>.Ok(
-        new { deleted = openLibraryBooks.Count },
-        $"Successfully deleted {openLibraryBooks.Count} Open Library books."));
-}
-
+    [HttpGet("stats")]
+    public async Task<ActionResult<ApiResponse<object>>> Stats(CancellationToken ct)
+    {
+        var r = await _stats.GetStatsAsync(ct);
+        return Ok(ApiResponse<object>.Ok(r.Data!, r.Message));
+    }
 }
