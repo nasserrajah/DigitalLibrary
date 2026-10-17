@@ -22,37 +22,42 @@ public class AdminCleanupController : ControllerBase
     }
 
     [HttpDelete("remove-openlibrary-books")]
-    public async Task<ActionResult<ApiResponse<object>>> RemoveOpenLibraryBooks(CancellationToken ct)
-    {
-        // 1. تأكد أن المستخدم أدمن
-        if (!_me.IsAdmin)
-            return Forbid("Only admins can perform this action.");
+public async Task<ActionResult<ApiResponse<object>>> RemoveOpenLibraryBooks(
+    CancellationToken ct)
+{
+    if (!_me.IsAdmin)
+        return Forbid();
 
-        // 2. ابحث عن الكتب التي لها GutenbergId (أو downloadUrl) فهي من Open Library
-        var openLibraryBooks = await _db.Books
-            .Where(b => b.GutenbergId != null || (b.DownloadUrl != null && b.DownloadUrl != ""))
-            .ToListAsync(ct);
+    // 🆕 اكتشف كتب Open Library بأكثر من طريقة
+    var openLibraryBooks = await _db.Books
+        .Where(b =>
+            // 1) Gutenberg (الأحدث)
+            b.GutenbergId != null
+            // 2) روابط Gutenberg
+            || (b.DownloadUrl != null && b.DownloadUrl.Contains("gutenberg"))
+            // 3) غلاف من Open Library
+            || (b.CoverImage != null && b.CoverImage.Contains("openlibrary.org"))
+            // 4) غلاف من Gutenberg
+            || (b.CoverImage != null && b.CoverImage.Contains("gutenberg.org"))
+            // 5) الناشر Project Gutenberg
+            || (b.Publisher != null && b.Publisher.Contains("Gutenberg"))
+            // 6) كتب بلا ملف + حجم 0 (من imports القديمة)
+            || (b.FileSize == 0
+                && string.IsNullOrEmpty(b.FileName)
+                && string.IsNullOrEmpty(b.FilePath)))
+        .ToListAsync(ct);
 
-        if (!openLibraryBooks.Any())
-            return Ok(ApiResponse<object>.Ok(new { deleted = 0 }, "No Open Library books found."));
-
-        // 3. احذف الملفات المحلية إن وجدت (احتياطاً)
-        foreach (var book in openLibraryBooks)
-        {
-            if (!string.IsNullOrEmpty(book.FilePath) && !book.FilePath.StartsWith("http"))
-            {
-                // يمكنك حقن IFileStorageService هنا لحذف الملفات
-                // لكن للتبسيط، سنتجاهلها لأن كتب Open Library عادة لا تملك ملفات محلية
-            }
-        }
-
-        // 4. احذف الكتب من قاعدة البيانات (CASCADE سيحذف الارتباطات)
-        _db.Books.RemoveRange(openLibraryBooks);
-        await _db.SaveChangesAsync(ct);
-
+    if (!openLibraryBooks.Any())
         return Ok(ApiResponse<object>.Ok(
-            new { deleted = openLibraryBooks.Count },
-            $"Successfully deleted {openLibraryBooks.Count} Open Library books."
-        ));
-    }
+            new { deleted = 0 },
+            "No Open Library books found."));
+
+    _db.Books.RemoveRange(openLibraryBooks);
+    await _db.SaveChangesAsync(ct);
+
+    return Ok(ApiResponse<object>.Ok(
+        new { deleted = openLibraryBooks.Count },
+        $"Successfully deleted {openLibraryBooks.Count} Open Library books."));
+}
+
 }
