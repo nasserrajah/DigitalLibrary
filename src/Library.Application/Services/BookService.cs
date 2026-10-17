@@ -92,16 +92,46 @@ public class BookService : IBookService
         return Result<BookDto>.Ok(_mapper.Map<BookDto>(book), "Book updated");
     }
 
-    public async Task<Result> DeleteAsync(Guid id, CancellationToken ct = default)
+   public async Task<Result> DeleteAsync(Guid id, CancellationToken ct = default)
+{
+    var book = await _db.Books
+        .Include(b => b.InLibraries)
+        .Include(b => b.Favorites)
+        .FirstOrDefaultAsync(b => b.Id == id, ct);
+
+    if (book is null) return Result.Fail("Book not found");
+
+    // حذف الملفات المحلية (تجاهل URLs الخارجية)
+    if (!string.IsNullOrEmpty(book.FilePath) && !IsExternalUrl(book.FilePath))
     {
-        var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == id, ct);
-        if (book is null) return Result.Fail("Book not found");
-        if (!string.IsNullOrEmpty(book.FilePath)) await _storage.DeleteAsync(book.FilePath, ct);
-        if (!string.IsNullOrEmpty(book.CoverImage)) await _storage.DeleteAsync(book.CoverImage, ct);
-        _db.Books.Remove(book);
-        await _db.SaveChangesAsync(ct);
-        return Result.Ok("Book deleted");
+        try { await _storage.DeleteAsync(book.FilePath, ct); } catch { }
     }
+    if (!string.IsNullOrEmpty(book.CoverImage) && !IsExternalUrl(book.CoverImage))
+    {
+        try { await _storage.DeleteAsync(book.CoverImage, ct); } catch { }
+    }
+
+    // تحرير مساحة كل مستخدم
+    foreach (var libItem in book.InLibraries)
+    {
+        var user = await _db.Users.FindAsync(new object[] { libItem.UserId }, ct);
+        if (user is not null)
+            user.StorageUsed = Math.Max(0, user.StorageUsed - libItem.FileSize);
+    }
+
+    _db.Books.Remove(book);
+    await _db.SaveChangesAsync(ct);
+
+    _log.LogInformation(
+        "Book '{Title}' deleted. Freed {Size} bytes across {Count} users.",
+        book.Title, book.FileSize, book.InLibraries.Count);
+
+    return Result.Ok("Book deleted completely");
+}
+
+private static bool IsExternalUrl(string? path)
+    => !string.IsNullOrEmpty(path)
+       && (path.StartsWith("http://") || path.StartsWith("https://"));
 
     public async Task<Result<BookDto>> UploadFileAsync(Guid id, Stream stream, string fileName, CancellationToken ct = default)
     {
