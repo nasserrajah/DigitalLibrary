@@ -1,0 +1,6 @@
+{
+  "Library.API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "~",
+  "Library.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "~",
+  "Library.Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "~",
+  "Library.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "~"
+}

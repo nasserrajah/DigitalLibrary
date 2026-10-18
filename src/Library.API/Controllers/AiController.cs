@@ -19,10 +19,7 @@ public class AiController : ControllerBase
     private readonly AppDbContext _db;
     private readonly ILogger<AiController> _logger;
 
-    // الحد الأقصى للكتب المرسلة للـ AI
     private const int MaxBooksForAi = 150;
-
-    // أقصى طول للوصف
     private const int MaxDescriptionLength = 150;
 
     public AiController(
@@ -47,40 +44,22 @@ public class AiController : ControllerBase
 
         try
         {
-            // ═══════════════════════════════════════════════
-            // 1) جلب المستخدم
-            // ═══════════════════════════════════════════════
             var userId = _me.UserId!.Value;
             var user = await _db.Users.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == userId, ct);
             var userName = user?.FullName ?? "المستخدم";
 
-            // ═══════════════════════════════════════════════
-            // 2) تحليل السؤال
-            // ═══════════════════════════════════════════════
             var parsed = AiQueryParser.Parse(request.Question);
 
             _logger.LogInformation(
-                "AI Query from {Email}: '{Question}' | Keywords=[{Kws}] | Categories=[{Cats}] | Languages=[{Langs}]",
+                "AI Query from {Email}: '{Question}' | IsFirst={First} | HistoryCount={HCount}",
                 user?.Email ?? "unknown",
                 request.Question,
-                string.Join(", ", parsed.Keywords),
-                string.Join(", ", parsed.Categories),
-                string.Join(", ", parsed.Languages));
+                request.IsFirstMessage,
+                request.History?.Count ?? 0);
 
-            // ═══════════════════════════════════════════════
-            // 3) البحث متعدد الاستراتيجيات في DB
-            // ═══════════════════════════════════════════════
             var candidateBooks = await SearchMultipleStrategiesAsync(parsed, ct);
 
-            _logger.LogInformation(
-                "Found {Count} candidate books for the query. Titles: {Titles}",
-                candidateBooks.Count,
-                string.Join(" | ", candidateBooks.Take(5).Select(b => b.Title)));
-
-            // ═══════════════════════════════════════════════
-            // 4) تحويل الكتب إلى AiBookCandidate
-            // ═══════════════════════════════════════════════
             var aiBooks = candidateBooks
                 .Take(MaxBooksForAi)
                 .Select(b => new AiBookCandidate
@@ -98,19 +77,27 @@ public class AiController : ControllerBase
                 })
                 .ToList();
 
-            // ═══════════════════════════════════════════════
-            // 5) إرسال للـ AI مع تعليمات شاملة
-            // ═══════════════════════════════════════════════
-            var enhancedQuestion = BuildEnhancedQuestion(
-                request.Question, parsed, aiBooks.Count);
+            // بناء نص سياق المحادثة السابقة
+            var historyText = "";
+            if (!request.IsFirstMessage && request.History != null && request.History.Any())
+            {
+                historyText = string.Join("\n", request.History.Select(h =>
+                    $"{h.Role}: {h.Content}"));
+            }
 
             var answer = await _aiService.GetBookAdviceAsync(
-                userName, enhancedQuestion, aiBooks, ct);
+                userName,
+                request.Question,
+                aiBooks,
+                request.IsFirstMessage, // ✅ نمرر حالة الرسالة الأولى
+                historyText,            // ✅ نمرر السياق
+                ct);
 
             return Ok(ApiResponse<object>.Ok(new
             {
                 answer,
                 totalBooksAvailable = aiBooks.Count,
+                isFirstMessage = request.IsFirstMessage,
                 source = "unified_handler"
             }, "تم"));
         }
@@ -121,16 +108,12 @@ public class AiController : ControllerBase
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 🔍 البحث متعدد الاستراتيجيات
-    // ═══════════════════════════════════════════════════════════
     private async Task<List<Domain.Entities.Book>> SearchMultipleStrategiesAsync(
         ParsedQuery parsed, CancellationToken ct)
     {
         var allBooks = new List<Domain.Entities.Book>();
         var seenIds = new HashSet<Guid>();
 
-        // 1) البحث بالكلمات المفتاحية (عنوان/مؤلف/وصف/ISBN)
         if (parsed.Keywords.Count > 0)
         {
             var keywordBooks = await _db.Books.AsNoTracking()
@@ -147,10 +130,8 @@ public class AiController : ControllerBase
                 .ToListAsync(ct);
 
             AddUniqueBooks(allBooks, keywordBooks, seenIds);
-            _logger.LogInformation("Keyword search: {Count} books found", keywordBooks.Count);
         }
 
-        // 2) البحث بالتصنيفات
         if (parsed.Categories.Count > 0)
         {
             var categoryBooks = await _db.Books.AsNoTracking()
@@ -163,10 +144,8 @@ public class AiController : ControllerBase
                 .ToListAsync(ct);
 
             AddUniqueBooks(allBooks, categoryBooks, seenIds);
-            _logger.LogInformation("Category search: {Count} books found", categoryBooks.Count);
         }
 
-        // 3) البحث باللغات
         if (parsed.Languages.Count > 0)
         {
             var languageBooks = await _db.Books.AsNoTracking()
@@ -179,10 +158,8 @@ public class AiController : ControllerBase
                 .ToListAsync(ct);
 
             AddUniqueBooks(allBooks, languageBooks, seenIds);
-            _logger.LogInformation("Language search: {Count} books found", languageBooks.Count);
         }
 
-        // 4) إذا كان لدينا أقل من 30 كتاباً → أضف كتباً حديثة كسياق
         if (allBooks.Count < 30)
         {
             var recentBooks = await _db.Books.AsNoTracking()
@@ -193,7 +170,6 @@ public class AiController : ControllerBase
                 .ToListAsync(ct);
 
             AddUniqueBooks(allBooks, recentBooks, seenIds);
-            _logger.LogInformation("Added recent books for context: {Count}", recentBooks.Count);
         }
 
         return allBooks;
@@ -210,50 +186,17 @@ public class AiController : ControllerBase
                 target.Add(book);
         }
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // 📝 بناء السؤال المحسّن للـ AI
-    // ═══════════════════════════════════════════════════════════
-    private static string BuildEnhancedQuestion(
-        string originalQuestion, ParsedQuery parsed, int booksCount)
-    {
-        return $"""
-            سؤال المستخدم:
-            "{originalQuestion}"
-
-            عدد الكتب المتاحة في القائمة: {booksCount}
-
-            ══════════════════════════════════════════════
-            🎯 تعليمات الإجابة (اقرأها بعناية):
-            ══════════════════════════════════════════════
-
-            1. حدد نوع السؤال:
-               • سؤال عن كتاب محدد ("هل عندكم كتاب X؟") → ابحث في Title
-               • سؤال عن مؤلف ("من مؤلف X؟") → ابحث في Title واذكر Author
-               • سؤال عن محتوى ("عن ماذا يتحدث X؟") → اذكر Description
-               • سؤال عن تصنيف ("ما كتب البرمجة؟") → فلتر حسب CategoryName
-               • طلب ترشيح ("اقترح لي...") → رشح من القائمة
-               • سؤال عام ("مرحبا"، "كيف حالك") → رد بشكل مناسب
-
-            2. قواعد صارمة:
-               ⛔ لا تذكر أي كتاب غير موجود في القائمة المرفقة
-               ⛔ لا تخترع أسماء مؤلفين أو تواريخ أو تفاصيل
-               ⛔ لا تضع أرقاماً عشوائية أو سنوات غير مذكورة
-
-            3. إذا سُئلت عن شيء غير موجود:
-               ✅ اعتذر بلطف
-               ✅ اذكر 2-3 كتب من القائمة قد تعجبه
-               ✅ اقترح البحث بكلمات أخرى
-
-            4. الأجوبة:
-               ✅ قصيرة وواضحة
-               ✅ ابدأ بتحية باسم المستخدم
-               ✅ استخدم تنسيق markdown (bold، lists)
-            """;
-    }
 }
 
 public class AiAskRequest
 {
     public string Question { get; set; } = string.Empty;
+    public bool IsFirstMessage { get; set; } = true;
+    public List<ChatHistoryItem>? History { get; set; }
+}
+
+public class ChatHistoryItem
+{
+    public string Role { get; set; } = "user";
+    public string Content { get; set; } = "";
 }

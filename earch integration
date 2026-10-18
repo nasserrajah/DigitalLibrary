@@ -1,0 +1,6 @@
+src/Library.API/Controllers/AiController.cs
+src/Library.API/Program.cs
+src/Library.Application/Services/AiQueryParser.cs
+src/Library.Domain/Dtos/AiBookCandidate.cs
+src/Library.Domain/Interfaces/IAiService.cs
+src/Library.Infrastructure/AI/GeminiAiService.cs
