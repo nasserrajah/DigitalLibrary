@@ -13,7 +13,6 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Library.Application.Interfaces;
 using Library.Infrastructure.AI;
-using Library.Domain.Interfaces;
 
 
 var builder = WebApplication.CreateBuilder(args);
