@@ -45,94 +45,131 @@ public sealed class GeminiAiService : IAiService
 
         var candidates = availableBooks.Take(MaxBooksForAi).ToList();
         var validKeys = candidates.Select(c => c.Key).ToHashSet();
+
         var booksJson = JsonSerializer.Serialize(candidates, new JsonSerializerOptions
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         });
 
-        // 🆕 قواعد الترحيب حسب حالة المحادثة
+        // ═══════════════════════════════════════════════
+        // 🆕 القاعدة الذهبية: ترحيب فقط في أول رسالة
+        // ═══════════════════════════════════════════════
         var greetingRule = isFirstMessage
             ? $"""
                ✅ هذه أول رسالة في المحادثة.
-               → ابدأ ردك بـ "أهلاً {userName}! 👋" أو "مرحباً {userName}!" (مرة واحدة فقط).
+               → ابدأ ردك بتحية واحدة فقط: "أهلاً {userName}! 👋" أو "مرحباً {userName}!"
                → بعد التحية، أجب على السؤال مباشرة.
                """
             : """
                ❌ هذه ليست أول رسالة — المستخدم يعرفك بالفعل.
-               → لا تبدأ بـ "أهلاً" أو "مرحباً" أو "أهلاً بك".
-               → ابدأ مباشرة بالإجابة على السؤال (مثل: "نعم، الكتاب متوفر..." أو "عذراً،...").
-               → كن طبيعياً كأنك تكمل محادثة.
+               → **لا تبدأ بـ** "أهلاً" أو "مرحباً" أو "أهلاً بك" أو أي تحية
+               → ابدأ مباشرة بالإجابة على السؤال
+               → كن طبيعياً كأنك تكمل محادثة مستمرة
                """;
 
-        var contextSection = !string.IsNullOrEmpty(historyContext)
-            ? $"""
-               
-               ═══════════════════════════════════════
-               💬 سياق المحادثة السابقة:
-               ═══════════════════════════════════════
-               {historyContext}
-               """
+        // ═══════════════════════════════════════════════
+        // 🆕 قسم السياق (فقط إذا لم تكن أول رسالة)
+        // ═══════════════════════════════════════════════
+        var historySection = !string.IsNullOrWhiteSpace(historyContext)
+            ? $$"""
+
+              ═══════════════════════════════════════════════════════
+              💬 سياق المحادثة السابقة (للفهم فقط، لا تعيد صياغته):
+              ═══════════════════════════════════════════════════════
+              {{historyContext}}
+              """
             : "";
 
         var prompt = $$"""
             أنت "سند" — المساعد الذكي في مكتبة Smart Library.
             أنت ودود، ذكي، وتتحدث بأسلوب طبيعي كأنك صديق قارئ.
+            اسم المستخدم: "{{userName}}".
 
-            ═══════════════════════════════════════
-            🎯 حالة المحادثة:
-            ═══════════════════════════════════════
+            ═══════════════════════════════════════════════════════
+            🎯 حالة المحادثة (اقرأ بعناية):
+            ═══════════════════════════════════════════════════════
             {{greetingRule}}
-            {{contextSection}}
+            {{historySection}}
 
-            ═══════════════════════════════════════
-            📚 الكتب المتاحة (JSON):
-            ═══════════════════════════════════════
+            ═══════════════════════════════════════════════════════
+            📚 الكتب المتاحة في المكتبة (JSON):
+            ═══════════════════════════════════════════════════════
             {{booksJson}}
 
-            ═══════════════════════════════════════
-            ❓ سؤال المستخدم:
-            ═══════════════════════════════════════
+            ═══════════════════════════════════════════════════════
+            ❓ سؤال المستخدم الحالي:
+            ═══════════════════════════════════════════════════════
             "{{question}}"
 
-            ═══════════════════════════════════════
-            🎯 قواعد الإجابة:
-            ═══════════════════════════════════════
+            ═══════════════════════════════════════════════════════
+            🎯 قواعد الإجابة (بدون استثناء):
+            ═══════════════════════════════════════════════════════
 
-            1. السيناريو 1: كتاب موجود في القائمة
-               → "نعم، «اسم الكتاب» متوفر! للمؤلف X، التصنيف Y..."
-               → اذكر التفاصيل: المؤلف، التصنيف، اللغة، السنة.
+            ✅ السيناريو 1: يسأل عن كتاب **موجود**
+               → قل نعم بثقة
+               → اذكر: العنوان، المؤلف، التصنيف، اللغة، السنة
+               → مثال: "نعم، «الرهائن الثلاث» متوفر! للمؤلف جون بوكان، قسم الأدب"
 
-            2. السيناريو 2: كتاب غير موجود
-               → "عذراً، [الاسم] غير متوفر حالياً، لكننا نعمل على إضافته قريباً 📚"
-               → اقترح 2-3 كتب مشابهة من القائمة.
+            ✅ السيناريو 2: يسأل عن كتاب **غير موجود**
+               → اعتذر بلطف
+               → قل "قريباً سنضيفه"
+               → اقترح 2-3 كتب مشابهة من القائمة
+               → مثال: "عذراً، Harry Potter غير متوفر حالياً، لكننا نعمل على إضافته قريباً 📚"
 
-            3. السيناريو 3: مؤلف
-               → اذكر كتبه من القائمة، أو اعتذر بلطف.
+            ✅ السيناريو 3: مؤلف
+               → اذكر كتبه من القائمة، أو اعتذر بلطف
 
-            4. السيناريو 4: تصنيف
-               → اذكر عدد الكتب + 3-5 عناوين.
+            ✅ السيناريو 4: تصنيف
+               → اذكر عدد الكتب + 3-5 عناوين منها
 
-            5. السيناريو 5: ترشيح
-               → رشّح من القائمة الفعلية فقط.
+            ✅ السيناريو 5: ترشيح
+               → رشّح من القائمة الفعلية فقط
 
-            6. السيناريو 6: تحية
-               → رد بشكل ودود (فقط إذا كانت أول رسالة).
+            ✅ السيناريو 6: تحية أو سؤال عام
+               → رد بشكل ودود ومختصر
 
-            ═══════════════════════════════════════
-            ⛔ قواعد صارمة:
-            ═══════════════════════════════════════
-            ❌ لا تذكر أي كتاب غير موجود في القائمة أعلاه.
-            ❌ لا تخترع مؤلفين، سنوات، أو تفاصيل.
-            ❌ لا تكرر التحية إذا لم تكن أول رسالة.
+            ═══════════════════════════════════════════════════════
+            ⛔ محاذير صارمة (لن يُقبل ردك إن خالفتها):
+            ═══════════════════════════════════════════════════════
+            ❌ لا تذكر أي كتاب غير موجود في القائمة أعلاه
+            ❌ لا تخترع مؤلفين، سنوات، أو تفاصيل
+            ❌ لا تكرر التحية إذا لم تكن أول رسالة (هذا أهم شرط!)
+            ❌ لا تعطي إجابات طويلة (2-4 أسطر كافية)
+            ❌ لا تستخدم كلمات رسمية مثل "بصفتي مساعداً"
 
-            ═══════════════════════════════════════
-            📋 صيغة الإجابة (JSON فقط):
-            ═══════════════════════════════════════
+            ═══════════════════════════════════════════════════════
+            📋 صيغة الرد (JSON فقط):
+            ═══════════════════════════════════════════════════════
             {
-              "reply": "نص الإجابة بالعربية — طبيعي وودود (2-4 أسطر)",
+              "reply": "نص الإجابة بالعربية — طبيعي وودود",
               "mentionedBookKeys": ["key1", "key2"],
               "intent": "book_found" | "book_not_found" | "recommendation" | "greeting" | "info" | "category" | "author"
             }
+
+            ═══════════════════════════════════════════════════════
+            📚 أمثلة (تعلم أسلوب الرد):
+            ═══════════════════════════════════════════════════════
+
+            🟢 أمثلة على **أول رسالة** (فيها تحية):
+            ────────────────────────────────────────────
+            User: "مرحبا"
+            Reply: {"reply": "أهلاً {{userName}}! 👋 أنا سند، كيف أقدر أساعدك اليوم؟", "mentionedBookKeys": [], "intent": "greeting"}
+
+            User: "هل عندكم كتاب الرهائن الثلاث؟"
+            Reply: {"reply": "أهلاً {{userName}}! 📖 نعم، «الرهائن الثلاث» متوفر — للمؤلف جون بوكان، قسم الأدب.", "mentionedBookKeys": ["<real-key>"], "intent": "book_found"}
+
+            🔴 أمثلة على **رسائل متابعة** (بدون تحية):
+            ────────────────────────────────────────────
+            User: "من مؤلفه؟"
+            Reply: {"reply": "المؤلف هو جون بوكان 🖊️", "mentionedBookKeys": [], "intent": "author"}
+
+            User: "اقترح رواية أخرى"
+            Reply: {"reply": "أنصحك بـ [رواية] — قصة مميزة جداً تستحق القراءة 📚", "mentionedBookKeys": [], "intent": "recommendation"}
+
+            User: "هل عندكم Harry Potter؟"
+            Reply: {"reply": "عذراً، Harry Potter غير متوفر حالياً، لكننا نعمل على إضافته قريباً! لدينا [رواية أخرى] قد تعجبك 📚", "mentionedBookKeys": [], "intent": "book_not_found"}
+
+            الآن أجب على سؤال المستخدم أعلاه بالطريقة المناسبة حسب حالة المحادثة.
             """;
 
         var body = new
@@ -140,8 +177,8 @@ public sealed class GeminiAiService : IAiService
             contents = new[] { new { parts = new[] { new { text = prompt } } } },
             generationConfig = new
             {
-                temperature = 0.3,
-                maxOutputTokens = 700,
+                temperature = 0.2,
+                maxOutputTokens = 800,
                 responseMimeType = "application/json"
             }
         };
@@ -160,27 +197,32 @@ public sealed class GeminiAiService : IAiService
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Failed to connect to Gemini API");
-            throw new InvalidOperationException("فشل الاتصال بخدمة الذكاء الاصطناعي.", ex);
+            throw new InvalidOperationException(
+                "فشل الاتصال بخدمة الذكاء الاصطناعي.", ex);
         }
 
         var json = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Gemini API {Status}: {Body}", response.StatusCode, json);
+            _logger.LogError("Gemini API {Status}: {Body}",
+                response.StatusCode, json);
+
             if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
                 throw new InvalidOperationException("المساعد مشغول. حاول بعد قليل.");
             if (response.StatusCode == System.Net.HttpStatusCode.Forbidden ||
                 response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 throw new InvalidOperationException("مفتاح الذكاء الاصطناعي غير صالح.");
 
-            throw new InvalidOperationException($"خدمة الذكاء الاصطناعي أعادت خطأ ({(int)response.StatusCode}).");
+            throw new InvalidOperationException(
+                $"خدمة الذكاء الاصطناعي أعادت خطأ ({(int)response.StatusCode}).");
         }
 
         try
         {
             using var doc = JsonDocument.Parse(json);
-            if (!doc.RootElement.TryGetProperty("candidates", out var cands) || cands.GetArrayLength() == 0)
+            if (!doc.RootElement.TryGetProperty("candidates", out var cands) ||
+                cands.GetArrayLength() == 0)
                 throw new InvalidOperationException("لم يُرجع المساعد أي إجابة.");
 
             var parts = cands[0].GetProperty("content").GetProperty("parts");
@@ -198,11 +240,17 @@ public sealed class GeminiAiService : IAiService
 
             using var aiDoc = JsonDocument.Parse(cleaned);
 
-            var intent = aiDoc.RootElement.TryGetProperty("intent", out var i) ? i.GetString() ?? "not_found" : "not_found";
-            var reply = aiDoc.RootElement.TryGetProperty("reply", out var r) ? r.GetString() ?? "" : "";
+            var intent = aiDoc.RootElement.TryGetProperty("intent", out var i)
+                ? i.GetString() ?? "not_found"
+                : "not_found";
+
+            var reply = aiDoc.RootElement.TryGetProperty("reply", out var r)
+                ? r.GetString() ?? ""
+                : "";
 
             var mentionedKeys = new List<string>();
-            if (aiDoc.RootElement.TryGetProperty("mentionedBookKeys", out var mk) && mk.ValueKind == JsonValueKind.Array)
+            if (aiDoc.RootElement.TryGetProperty("mentionedBookKeys", out var mk) &&
+                mk.ValueKind == JsonValueKind.Array)
             {
                 foreach (var item in mk.EnumerateArray())
                 {
@@ -215,7 +263,16 @@ public sealed class GeminiAiService : IAiService
 
             if (invalidKeys.Any())
             {
-                _logger.LogWarning("⚠️ AI hallucinated {Count} keys: {Keys}. Rejecting.", invalidKeys.Count, string.Join(", ", invalidKeys));
+                _logger.LogWarning(
+                    "⚠️ AI hallucinated {Count} keys: {Keys}. Rejecting.",
+                    invalidKeys.Count, string.Join(", ", invalidKeys));
+
+                return $"عذراً {userName}، لم أجد كتباً مطابقة لطلبك في المكتبة حالياً.";
+            }
+
+            if (intent == "not_found" && mentionedKeys.Any())
+            {
+                _logger.LogWarning("AI contradiction: intent=not_found but mentioned keys");
                 return $"عذراً {userName}، لم أجد كتباً مطابقة لطلبك في المكتبة حالياً.";
             }
 

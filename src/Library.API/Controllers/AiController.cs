@@ -21,6 +21,7 @@ public class AiController : ControllerBase
 
     private const int MaxBooksForAi = 150;
     private const int MaxDescriptionLength = 150;
+    private const int MaxHistoryMessages = 10;
 
     public AiController(
         IAiService aiService,
@@ -44,22 +45,47 @@ public class AiController : ControllerBase
 
         try
         {
+            // ═══════════════════════════════════════════════
+            // 1) جلب المستخدم
+            // ═══════════════════════════════════════════════
             var userId = _me.UserId!.Value;
             var user = await _db.Users.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == userId, ct);
             var userName = user?.FullName ?? "المستخدم";
 
+            // ═══════════════════════════════════════════════
+            // 2) تحليل السؤال
+            // ═══════════════════════════════════════════════
             var parsed = AiQueryParser.Parse(request.Question);
 
+            // 🆕 بناء نص السياق من الرسائل السابقة
+            string historyContext = "";
+            if (!request.IsFirstMessage &&
+                request.History != null &&
+                request.History.Any())
+            {
+                var recent = request.History
+                    .TakeLast(MaxHistoryMessages)
+                    .Select(h => $"{TranslateRole(h.Role)}: {h.Content}");
+                historyContext = string.Join("\n", recent);
+            }
+
             _logger.LogInformation(
-                "AI Query from {Email}: '{Question}' | IsFirst={First} | HistoryCount={HCount}",
+                "AI Query from {Email}: '{Question}' | IsFirst={First} | History={HCount} | Keywords=[{Kws}]",
                 user?.Email ?? "unknown",
                 request.Question,
                 request.IsFirstMessage,
-                request.History?.Count ?? 0);
+                request.History?.Count ?? 0,
+                string.Join(", ", parsed.Keywords));
 
+            // ═══════════════════════════════════════════════
+            // 3) البحث متعدد الاستراتيجيات
+            // ═══════════════════════════════════════════════
             var candidateBooks = await SearchMultipleStrategiesAsync(parsed, ct);
 
+            // ═══════════════════════════════════════════════
+            // 4) تحويل الكتب
+            // ═══════════════════════════════════════════════
             var aiBooks = candidateBooks
                 .Take(MaxBooksForAi)
                 .Select(b => new AiBookCandidate
@@ -77,20 +103,19 @@ public class AiController : ControllerBase
                 })
                 .ToList();
 
-            // بناء نص سياق المحادثة السابقة
-            var historyText = "";
-            if (!request.IsFirstMessage && request.History != null && request.History.Any())
-            {
-                historyText = string.Join("\n", request.History.Select(h =>
-                    $"{h.Role}: {h.Content}"));
-            }
+            _logger.LogInformation(
+                "Sending {Count} books to AI. First={First}",
+                aiBooks.Count, request.IsFirstMessage);
 
+            // ═══════════════════════════════════════════════
+            // 5) إرسال للـ AI (السؤال الأصلي + isFirstMessage + history)
+            // ═══════════════════════════════════════════════
             var answer = await _aiService.GetBookAdviceAsync(
                 userName,
                 request.Question,
                 aiBooks,
-                request.IsFirstMessage, // ✅ نمرر حالة الرسالة الأولى
-                historyText,            // ✅ نمرر السياق
+                request.IsFirstMessage,
+                historyContext,
                 ct);
 
             return Ok(ApiResponse<object>.Ok(new
@@ -107,6 +132,9 @@ public class AiController : ControllerBase
             return BadRequest(ApiResponse<object>.Fail(ex.Message));
         }
     }
+
+    private static string TranslateRole(string role) =>
+        role?.ToLower() == "assistant" ? "المساعد" : "المستخدم";
 
     private async Task<List<Domain.Entities.Book>> SearchMultipleStrategiesAsync(
         ParsedQuery parsed, CancellationToken ct)
@@ -130,6 +158,7 @@ public class AiController : ControllerBase
                 .ToListAsync(ct);
 
             AddUniqueBooks(allBooks, keywordBooks, seenIds);
+            _logger.LogInformation("Keyword search: {Count} books", keywordBooks.Count);
         }
 
         if (parsed.Categories.Count > 0)
@@ -144,6 +173,7 @@ public class AiController : ControllerBase
                 .ToListAsync(ct);
 
             AddUniqueBooks(allBooks, categoryBooks, seenIds);
+            _logger.LogInformation("Category search: {Count} books", categoryBooks.Count);
         }
 
         if (parsed.Languages.Count > 0)
@@ -158,6 +188,7 @@ public class AiController : ControllerBase
                 .ToListAsync(ct);
 
             AddUniqueBooks(allBooks, languageBooks, seenIds);
+            _logger.LogInformation("Language search: {Count} books", languageBooks.Count);
         }
 
         if (allBooks.Count < 30)
@@ -170,6 +201,7 @@ public class AiController : ControllerBase
                 .ToListAsync(ct);
 
             AddUniqueBooks(allBooks, recentBooks, seenIds);
+            _logger.LogInformation("Added recent books: {Count}", recentBooks.Count);
         }
 
         return allBooks;
@@ -191,12 +223,16 @@ public class AiController : ControllerBase
 public class AiAskRequest
 {
     public string Question { get; set; } = string.Empty;
+
+    // 🆕 هل هذه أول رسالة في المحادثة؟
     public bool IsFirstMessage { get; set; } = true;
+
+    // 🆕 سجل الرسائل السابقة
     public List<ChatHistoryItem>? History { get; set; }
 }
 
 public class ChatHistoryItem
 {
-    public string Role { get; set; } = "user";
-    public string Content { get; set; } = "";
+    public string Role { get; set; } = "user"; // "user" | "assistant"
+    public string Content { get; set; } = string.Empty;
 }
