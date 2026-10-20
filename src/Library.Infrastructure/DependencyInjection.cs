@@ -1,4 +1,5 @@
-﻿using Library.Domain.Entities;
+using Library.Infrastructure.Services;
+using Library.Domain.Entities;
 using Library.Domain.Interfaces;
 using Library.Infrastructure.Email;
 using Library.Infrastructure.Identity;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Library.Infrastructure.TTS;     
 
 namespace Library.Infrastructure;
 
@@ -17,12 +19,12 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration cfg)
     {
-        // ═══════════════════════ Database ═══════════════════════
+        // ??????????????????????? Database ???????????????????????
         services.AddDbContext<AppDbContext>(o =>
             o.UseSqlite(cfg.GetConnectionString("Default")
                 ?? "Data Source=library.db"));
 
-        // ═══════════════════════ Identity ═══════════════════════
+        // ??????????????????????? Identity ???????????????????????
         services.AddIdentityCore<ApplicationUser>(opt =>
         {
             opt.Password.RequiredLength = 8;
@@ -34,27 +36,33 @@ public static class DependencyInjection
         .AddEntityFrameworkStores<AppDbContext>()
         .AddDefaultTokenProviders();
 
-        // ═══════════════════════ Settings ═══════════════════════
+        // ??????????????????????? Settings ???????????????????????
         services.Configure<JwtSettings>(cfg.GetSection("Jwt"));
         services.Configure<GoogleAuthSettings>(cfg.GetSection("Google"));
         services.Configure<FacebookAuthSettings>(cfg.GetSection("Facebook"));
 
-        // ═══════════════════════ Core Services ═══════════════════════
+        // ??????????????????????? Core Services ???????????????????????
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IEmailService, SmtpEmailService>();
 
-        // ═══════════════════════ External Auth Providers ═══════════════════════
-        // Google — uses Google.Apis.Auth (no HttpClient needed)
+        // ??????????????????????? External Auth Providers ???????????????????????
+        // Google � uses Google.Apis.Auth (no HttpClient needed)
         services.AddScoped<IExternalAuthProvider, GoogleAuthProvider>();
 
-        // Facebook — needs HttpClient (typed client)
+        // Facebook � needs HttpClient (typed client)
         services.AddHttpClient<FacebookAuthProvider>();
         services.AddScoped<IExternalAuthProvider>(sp =>
             sp.GetRequiredService<FacebookAuthProvider>());
 
-        // ⚠️ Gutendex / Open Library — REMOVED
+        // ?? Gutendex / Open Library � REMOVED
         // All books are now added manually by admin through the app.
+
+          // ??? ���� � ���� ����� ???
+        services.AddScoped<ITextToSpeechProvider, NullTtsProvider>();
+
+                // ═══════════════════════ Audio System ═══════════════════════
+        services.AddScoped<IAudioService, AudioService>();
 
         return services;
     }

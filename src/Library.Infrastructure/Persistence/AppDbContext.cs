@@ -15,6 +15,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, Microsoft.AspNetC
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    public DbSet<AudioSegment> AudioSegments => Set<AudioSegment>();              // ← جديد
+    public DbSet<ListeningProgress> ListeningProgresses => Set<ListeningProgress>();  // ← جديد
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         base.OnModelCreating(b);
