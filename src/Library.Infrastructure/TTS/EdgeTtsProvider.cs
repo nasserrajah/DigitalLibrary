@@ -1,19 +1,15 @@
+using EdgeTtsSharp;
 using Library.Domain.Interfaces;
 using Library.Domain.Models;
 using Microsoft.Extensions.Logging;
-using EdgeTtsSharp;
 
 namespace Library.Infrastructure.TTS;
 
-/// <summary>
-/// مزوّد TTS مجاني بالكامل يستخدم خدمة Edge Read Aloud عبر مكتبة EdgeTtsSharp.
-/// لا يتطلب مفتاح API ولا حسابًا. يعيد MP3 (audio/mpeg).
-/// الأصوات الافتراضية: ar-YE-SalehNeural (عربي) وen-US-AriaNeural (إنجليزي).
-/// </summary>
 public sealed class EdgeTtsProvider : ITextToSpeechProvider
 {
     private const string DefaultArabicVoice = "ar-YE-SalehNeural";
     private const string DefaultEnglishVoice = "en-US-AriaNeural";
+    private static readonly TimeSpan SynthesisTimeout = TimeSpan.FromSeconds(30);
 
     private readonly ILogger<EdgeTtsProvider> _log;
 
@@ -27,32 +23,37 @@ public sealed class EdgeTtsProvider : ITextToSpeechProvider
             return TtsResult.Fail(Name, "Text is empty.");
 
         var voiceName = ResolveVoice(request);
+        var tempFile = Path.Combine(Path.GetTempPath(), $"edge_tts_{Guid.NewGuid():N}.mp3");
 
         try
         {
-            _log.LogInformation(
-                "EdgeTTS synthesizing: voice={Voice}, length={Length}",
-                voiceName, request.Text.Length);
+            _log.LogInformation("EdgeTTS start: voice={Voice}, length={Length}", voiceName, request.Text.Length);
 
-            // EdgeTtsSharp API: GetVoice → GetAudioStream
+            // EdgeTtsSharp لا يدعم CancellationToken مباشرة، لذا نستخدم مهلة زمنية
             var voice = await EdgeTts.GetVoice(voiceName);
-
-            if (voice is null)
+            if (voice == null)
                 return TtsResult.Fail(Name, $"Voice '{voiceName}' not found.");
 
-            // GetAudioStream يعيد Stream يمكن القراءة منه
-            await using var audioStream = voice.GetAudioStream(request.Text);
+            var saveTask = voice.SaveAudioToFile(request.Text, tempFile);
+            var completed = await Task.WhenAny(saveTask, Task.Delay(SynthesisTimeout, ct));
 
-            using var ms = new MemoryStream();
-            await audioStream.CopyToAsync(ms, ct);
+            if (completed != saveTask)
+            {
+                _log.LogError("EdgeTTS timed out after {Seconds}s", SynthesisTimeout.TotalSeconds);
+                return TtsResult.Fail(Name, $"EdgeTTS timed out after {SynthesisTimeout.TotalSeconds:0}s.");
+            }
 
-            var bytes = ms.ToArray();
+            // انتظار المهمة للتحقق من أي استثناءات
+            await saveTask;
+
+            if (!File.Exists(tempFile))
+                return TtsResult.Fail(Name, "EdgeTTS did not produce a file.");
+
+            var bytes = await File.ReadAllBytesAsync(tempFile, ct);
             if (bytes.Length == 0)
                 return TtsResult.Fail(Name, "EdgeTTS returned empty audio.");
 
-            _log.LogInformation("EdgeTTS produced {Bytes} bytes for voice {Voice}",
-                bytes.Length, voiceName);
-
+            _log.LogInformation("EdgeTTS success: {Bytes} bytes for {Voice}", bytes.Length, voiceName);
             return TtsResult.Ok(bytes, "audio/mpeg", voiceName, Name);
         }
         catch (OperationCanceledException)
@@ -61,8 +62,12 @@ public sealed class EdgeTtsProvider : ITextToSpeechProvider
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "EdgeTTS synthesis failed for voice {Voice}", voiceName);
+            _log.LogError(ex, "EdgeTTS failed for voice {Voice}", voiceName);
             return TtsResult.Fail(Name, ex.Message);
+        }
+        finally
+        {
+            try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
         }
     }
 
