@@ -13,6 +13,8 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Library.Application.Interfaces;
 using Library.Infrastructure.AI;
+using Library.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -120,16 +122,21 @@ app.UseAuthorization();
 app.MapControllers();
 
 // ---------- Seed (with better error handling) ----------
+// ---------- Migrate + Seed (idempotent, safe) ----------
 try
 {
     using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    await db.Database.MigrateAsync();   // ← يطبّق فقط ما لم يُطبَّق
+    Log.Information("Database migrations applied successfully");
+
     await DbSeeder.SeedAsync(scope.ServiceProvider);
     Log.Information("Database seeded successfully");
 }
 catch (Exception ex)
 {
-    // لا نُسقط التطبيق — نكتفي بتسجيل الخطأ
-    Log.Error(ex, "Seed failed but app will continue");
+    Log.Error(ex, "Migrate/Seed failed but app will continue");
 }
 
 Log.Information("Starting Digital Library API on {Environment}", app.Environment.EnvironmentName);
