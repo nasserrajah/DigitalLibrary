@@ -55,11 +55,11 @@ public static class DependencyInjection
         services.AddScoped<IExternalAuthProvider>(sp =>
             sp.GetRequiredService<FacebookAuthProvider>());
 
-        // ?? Gutendex / Open Library � REMOVED
-        // All books are now added manually by admin through the app.
-
-          // ??? ���� � ���� ����� ???
-        services.AddScoped<ITextToSpeechProvider, NullTtsProvider>();
+        // ═══════════════════════ TTS ═══════════════════════
+         // EdgeTTS: مجاني، بدون مفتاح، يدعم العربية (بما فيها الأصوات اليمنية).
+        // NullTtsProvider محفوظ كخيار احتياطي — استبدل السطر أعلاه بـ NullTtsProvider
+        // إذا أردت تعطيل التوليد مؤقتًا.
+        services.AddScoped<ITextToSpeechProvider, EdgeTtsProvider>();
 
                 // ═══════════════════════ Audio System ═══════════════════════
         services.AddScoped<IAudioService, AudioService>();
