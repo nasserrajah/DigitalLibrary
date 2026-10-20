@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Library.Infrastructure.TTS;     
+using Library.Infrastructure.TTS;
 
 namespace Library.Infrastructure;
 
@@ -19,12 +19,12 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration cfg)
     {
-        // ??????????????????????? Database ???????????????????????
+        // ═══════════════════════ Database ═══════════════════════
         services.AddDbContext<AppDbContext>(o =>
             o.UseSqlite(cfg.GetConnectionString("Default")
                 ?? "Data Source=library.db"));
 
-        // ??????????????????????? Identity ???????????????????????
+        // ═══════════════════════ Identity ═══════════════════════
         services.AddIdentityCore<ApplicationUser>(opt =>
         {
             opt.Password.RequiredLength = 8;
@@ -36,32 +36,32 @@ public static class DependencyInjection
         .AddEntityFrameworkStores<AppDbContext>()
         .AddDefaultTokenProviders();
 
-        // ??????????????????????? Settings ???????????????????????
+        // ═══════════════════════ Settings ═══════════════════════
         services.Configure<JwtSettings>(cfg.GetSection("Jwt"));
         services.Configure<GoogleAuthSettings>(cfg.GetSection("Google"));
         services.Configure<FacebookAuthSettings>(cfg.GetSection("Facebook"));
 
-        // ??????????????????????? Core Services ???????????????????????
+        // ═══════════════════════ Core Services ═══════════════════════
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IEmailService, SmtpEmailService>();
 
-        // ??????????????????????? External Auth Providers ???????????????????????
-        // Google � uses Google.Apis.Auth (no HttpClient needed)
+        // ═══════════════════════ External Auth Providers ═══════════════════════
+        // Google — uses Google.Apis.Auth (no HttpClient needed)
         services.AddScoped<IExternalAuthProvider, GoogleAuthProvider>();
 
-        // Facebook � needs HttpClient (typed client)
+        // Facebook — needs HttpClient (typed client)
         services.AddHttpClient<FacebookAuthProvider>();
         services.AddScoped<IExternalAuthProvider>(sp =>
             sp.GetRequiredService<FacebookAuthProvider>());
 
         // ═══════════════════════ TTS ═══════════════════════
-         // EdgeTTS: مجاني، بدون مفتاح، يدعم العربية (بما فيها الأصوات اليمنية).
-        // NullTtsProvider محفوظ كخيار احتياطي — استبدل السطر أعلاه بـ NullTtsProvider
-        // إذا أردت تعطيل التوليد مؤقتًا.
-        services.AddScoped<ITextToSpeechProvider, EdgeTtsProvider>();
+        // Hakim AI: مجاني، بدون بطاقة ائتمان، يدعم العربية عبر REST API.
+        // NullTtsProvider محفوظ كخيار احتياطي إذا أردت تعطيل التوليد مؤقتاً.
+        services.AddHttpClient<HakimTtsProvider>();
+        services.AddScoped<ITextToSpeechProvider, HakimTtsProvider>();
 
-                // ═══════════════════════ Audio System ═══════════════════════
+        // ═══════════════════════ Audio System ═══════════════════════
         services.AddScoped<IAudioService, AudioService>();
 
         return services;
